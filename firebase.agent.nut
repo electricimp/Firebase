@@ -1,29 +1,25 @@
 class Firebase {
     // Library version
     static version = [1,0,0];
+    static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
     _db = null;              // The name of your firebase instance
     _auth = null;            // _auth key (if auth is enabled)
-    _baseUrl = null;         // Firebase base url
+    _baseUrl = null;         // Firebase base url (may change with 307 responses)
 
     // Debugging
     _debug = null;              // Debug flag, when true, class will log errors
 
-    // For REST calls:
+    // REST
     _defaultHeaders = { "Content-Type": "application/json" };
 
-    // For Streaming:
+    // Streaming
     _streamingHeaders = { "accept": "text/event-stream" };
     _streamingRequest = null;   // The request object of the streaming request
     _data = null;               // Current snapshot of what we're streaming
     _callbacks = null;          // List of _callbacks for streaming request
-
-    _kaTimer = null;            // Wakeup timer that watches for a dead Firebase socket
-    _kaPath = null;             // stream parameters to allow a restart on keepalive
-    _kaOnError = null;          // onError callback for keepalive
-
-    static KEEP_ALIVE = 60;     // Timeout for keep alive
+    _keepAliveTimer = null;            // Wakeup timer that watches for a dead Firebase socket
 
     /***************************************************************************
      * Constructor
@@ -38,7 +34,9 @@ class Firebase {
         _db = db;
         _baseUrl = "https://" + _db + "." + domain;
         _auth = auth;
+
         _data = {};
+
         _callbacks = {};
     }
 
@@ -55,10 +53,6 @@ class Firebase {
         // if we already have a stream open, don't open a new one
         if (isStreaming()) return false;
 
-        // Keep a backup of these for future reconnects
-        _kaPath = path;
-        _kaOnError = onError;
-
         if (onError == null) onError = _defaultErrorHandler.bindenv(this);
         _streamingRequest = http.get(_buildUrl(path), _streamingHeaders);
 
@@ -69,8 +63,8 @@ class Firebase {
         );
 
         // Tickle the keepalive timer
-        if (_kaTimer) imp.cancelwakeup(_kaTimer);
-        _kaTimer = imp.wakeup(KEEP_ALIVE, _keepAliveExpired.bindenv(this))
+        if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
+        _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
 
         // Return true if we opened the stream
         return true;
@@ -88,9 +82,14 @@ class Firebase {
                 return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
             } else if (resp.statuscode == 28 || resp.statuscode == 429) {
                 // if we timed out, just reconnect after a small delay
-                imp.wakeup(1, function() { return stream(path, onError); }.bindenv(this));
+                imp.wakeup(0, function() { return stream(path, onError); }.bindenv(this));
             } else {
-                // Reconnect unless the stream after an error
+                // If there's an onError callback, invoke it
+                if (onError != null) {
+                    imp.wakeup(0, function() { onError(resp); });
+                    return;
+                }
+                // Otherwise log an error (if enabled) and reconnect
                 _logError("Stream closed with error " + resp.statuscode);
                 imp.wakeup(1, function() { return stream(path, onError); }.bindenv(this))
             }
@@ -101,8 +100,8 @@ class Firebase {
     function _onStreamDataFactory(path, onError) {
         return function(messageString) {
             // Tickle the keep alive timer
-            if (_kaTimer) imp.cancelwakeup(_kaTimer);
-            _kaTimer = imp.wakeup(KEEP_ALIVE, _keepAliveExpired.bindenv(this))
+            if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
+            _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
 
             local messages = _parseEventMessage(messageString);
             foreach (message in messages) {
@@ -111,12 +110,13 @@ class Firebase {
 
                 // Check out every callback for matching path
                 foreach (path,callback in _callbacks) {
+
                     if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
                         // This is an exact match or a subbranch
 
-                        // create local variable so callback doesn't get confused
-                        local m = message;
-                        imp.wakeup(0, function() { callback(m.path, m.data); }.bindenv(this));
+                        // Create local instance of message for the callback
+                        local thisMessage = message;
+                        imp.wakeup(0, function() { callback(thisMessage.path, thisMessage.data); }.bindenv(this));
                     } else if (message.event == "patch") {
                         // This is a patch for a (potentially) parent node
                         foreach (head,body in message.data) {
@@ -131,9 +131,9 @@ class Firebase {
                         // This is the root or a superbranch for a put or delete
                         local subdata = _getDataFromPath(path, message.path, _data);
 
-                        // Create local variable so callback doesn't get confused
-                        local p = path;
-                        imp.wakeup(0, function() { callback(p, subdata); }.bindenv(this));
+                        // Create local instance of path for the callback
+                        local thisPath = path;
+                        imp.wakeup(0, function() { callback(thisPath, subdata); }.bindenv(this));
                     }
                 }
             }
@@ -175,7 +175,6 @@ class Firebase {
     function on(path, callback) {
         if (path.len() > 0 && path.slice(0, 1) != "/") path = "/" + path;
         if (path.len() > 1 && path.slice(-1) == "/") path = path.slice(0, -1);
-
         _callbacks[path] <- callback;
     }
 
@@ -329,11 +328,13 @@ class Firebase {
     }
 
     // No keep alive has been seen for a while, lets reconnect
-    function _keepAliveExpired() {
-        _kaTimer = null;
-        _logError("Keep alive timer expired. Reconnecting stream.")
-        closeStream();
-        stream(_kaPath, _kaOnError);
+    function _onKeepAliveExpiredFactory(path, onError) {
+        return function() {
+            _keepAliveTimer = null;
+            _logError("Keep alive timer expired. Reconnecting stream.")
+            closeStream();
+            stream(path, onError);
+        }.bindenv(this);
     }
 
     // parses event messages
@@ -523,4 +524,5 @@ class Firebase {
     function _logError(message) {
         if (_debug) server.error(message);
     }
+
 }
