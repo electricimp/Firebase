@@ -53,7 +53,7 @@ firebase.on("/settings", function(path, data) {
 });
 ```
 
-### steam(*[path, onErrorCallback]*)
+### stream(*[path, onErrorCallback]*)
 
 Creates a streaming request using the *path* as the base address to track. If no *path* is supplied, the root of the instance ("/") will be used.
 
