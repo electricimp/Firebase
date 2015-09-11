@@ -115,7 +115,7 @@ firebase.stream("/settings", function(path, data) {
 ```
 
 ### read(*path, callback*)
-Reads data from the specified path, and executes the callback handler once complete.
+Reads data from the specified path (i.e. performs a GET request).
 
 ```squirrel
 // Read all the settings:
@@ -192,3 +192,4 @@ device.on("no-tracking", function(data) {
 
 ## License
 The Firebase class is licensed under [MIT License](https://github.com/electricimp/Firebase/tree/master/LICENSE).
+
