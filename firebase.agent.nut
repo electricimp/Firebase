@@ -154,10 +154,14 @@ class Firebase {
      * Closes the stream (if there is one open)
      **************************************************************************/
     function closeStream() {
+        // Close the stream if it's open
         if (_streamingRequest) {
             _streamingRequest.cancel();
             _streamingRequest = null;
         }
+
+        // Kill the keepalive if it exists
+        if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
     }
 
     /***************************************************************************
@@ -330,7 +334,6 @@ class Firebase {
     // No keep alive has been seen for a while, lets reconnect
     function _onKeepAliveExpiredFactory(path, onError) {
         return function() {
-            _keepAliveTimer = null;
             _logError("Keep alive timer expired. Reconnecting stream.")
             closeStream();
             stream(path, onError);
