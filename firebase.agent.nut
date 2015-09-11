@@ -4,9 +4,9 @@ class Firebase {
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
-    _db = null;              // The name of your firebase instance
-    _auth = null;            // _auth key (if auth is enabled)
-    _baseUrl = null;         // Firebase base url (may change with 307 responses)
+    _db = null;                 // The name of your firebase instance
+    _auth = null;               // _auth key (if auth is enabled)
+    _baseUrl = null;            // base url (may change with 307 responses)
 
     // Debugging
     _debug = null;              // Debug flag, when true, class will log errors
@@ -19,7 +19,7 @@ class Firebase {
     _streamingRequest = null;   // The request object of the streaming request
     _data = null;               // Current snapshot of what we're streaming
     _callbacks = null;          // List of _callbacks for streaming request
-    _keepAliveTimer = null;            // Wakeup timer that watches for a dead Firebase socket
+    _keepAliveTimer = null;     // Wakeup timer that watches for a dead Firebase socket
 
     /***************************************************************************
      * Constructor
