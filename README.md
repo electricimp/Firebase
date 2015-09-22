@@ -101,7 +101,7 @@ Closes the current stream (if it is open), and takes no action otherwise.
 Reads the local/cached copy of the data at the specified path - intended for use in a .on() handler to prevent unnecessary communication with Firebase through the *read* method.
 
 ```squirrel
-firebase.stream("/settings", function(path, data) {
+firebase.on("/settings", function(path, data) {
     // Check if the location setting changed
     if ("location" in data) {
         // if it did, grab the location data from Firebase
