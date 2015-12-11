@@ -7,6 +7,7 @@ class Firebase {
     _db = null;                 // The name of your firebase instance
     _auth = null;               // _auth key (if auth is enabled)
     _baseUrl = null;            // base url (may change with 307 responses)
+    _domain = null;
 
     // Debugging
     _debug = null;              // Debug flag, when true, class will log errors
@@ -32,6 +33,7 @@ class Firebase {
         _debug = debug;
 
         _db = db;
+        _domain = domain;
         _baseUrl = "https://" + _db + "." + domain;
         _auth = auth;
 
@@ -64,7 +66,7 @@ class Firebase {
 
         // Tickle the keepalive timer
         if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
-        _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
+        _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError).bindenv(this));
 
         // Return true if we opened the stream
         return true;
@@ -319,7 +321,7 @@ class Firebase {
 
         local url = _baseUrl + "/" + path + ".json";
         url += "?ns=" + _db;
-        if (_auth != null) url = url + "&_auth=" + _auth;
+        if (_auth != null) url = url + "&auth=" + _auth;
 
         return url;
     }

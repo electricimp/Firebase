@@ -1,10 +1,10 @@
-# Firebase v1.0.0
+# Firebase v1.0.1
 
 The Firebase library allows you to easily integrate with Firebase's realtime backend, which includes data storage, user authentication, static hosting, and more.
 
-**To add this library to your project, add `#require "Firebase.class.nut:1.0.0"` to the top of your agent code.**
+**To add this library to your project, add `#require "Firebase.class.nut:1.0.1"` to the top of your agent code.**
 
-You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.0.0).
+You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.0.1).
 
 ## Class Usage
 
@@ -192,4 +192,3 @@ device.on("no-tracking", function(data) {
 
 ## License
 The Firebase class is licensed under [MIT License](https://github.com/electricimp/Firebase/tree/master/LICENSE).
-
