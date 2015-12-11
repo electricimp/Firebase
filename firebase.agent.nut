@@ -1,6 +1,6 @@
 class Firebase {
     // Library version
-    static version = [1,0,0];
+    static version = [1,0,1];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
