@@ -72,76 +72,6 @@ class Firebase {
         return true;
     }
 
-    // Stream Callback
-    function _onStreamExitFactory(path, onError) {
-        return function(resp) {
-            _streamingRequest = null;
-            if (resp.statuscode == 307 && "location" in resp.headers) {
-                // set new location
-                local location = resp.headers["location"];
-                local p = location.find(".firebaseio.com")+16;
-                _baseUrl = location.slice(0, p);
-                return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
-            } else if (resp.statuscode == 28 || resp.statuscode == 429) {
-                // if we timed out, just reconnect after a small delay
-                imp.wakeup(0, function() { return stream(path, onError); }.bindenv(this));
-            } else {
-                // If there's an onError callback, invoke it
-                if (onError != null) {
-                    imp.wakeup(0, function() { onError(resp); });
-                    return;
-                }
-                // Otherwise log an error (if enabled) and reconnect
-                _logError("Stream closed with error " + resp.statuscode);
-                imp.wakeup(1, function() { return stream(path, onError); }.bindenv(this))
-            }
-        };
-    }
-
-    // Stream Callback
-    function _onStreamDataFactory(path, onError) {
-        return function(messageString) {
-            // Tickle the keep alive timer
-            if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
-            _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
-
-            local messages = _parseEventMessage(messageString);
-            foreach (message in messages) {
-                // Update the internal cache
-                _updateCache(message);
-
-                // Check out every callback for matching path
-                foreach (path,callback in _callbacks) {
-
-                    if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
-                        // This is an exact match or a subbranch
-
-                        // Create local instance of message for the callback
-                        local thisMessage = message;
-                        imp.wakeup(0, function() { callback(thisMessage.path, thisMessage.data); }.bindenv(this));
-                    } else if (message.event == "patch") {
-                        // This is a patch for a (potentially) parent node
-                        foreach (head,body in message.data) {
-                            local newmessagepath = ((message.path == "/") ? "" : message.path) + "/" + head;
-                            if (newmessagepath == path) {
-                                // We have found a superbranch that matches, rewrite this as a PUT
-                                local subdata = _getDataFromPath(newmessagepath, message.path, _data);
-                                imp.wakeup(0, function() { callback(newmessagepath, subdata); }.bindenv(this));
-                            }
-                        }
-                    } else if (message.path == "/" || path.find(message.path + "/") == 0) {
-                        // This is the root or a superbranch for a put or delete
-                        local subdata = _getDataFromPath(path, message.path, _data);
-
-                        // Create local instance of path for the callback
-                        local thisPath = path;
-                        imp.wakeup(0, function() { callback(thisPath, subdata); }.bindenv(this));
-                    }
-                }
-            }
-        };
-    }
-
     /***************************************************************************
      * Returns whether or not there is currently a stream open
      * Returns:
@@ -333,6 +263,74 @@ class Firebase {
         }
     }
 
+    // Stream Callback
+    function _onStreamExitFactory(path, onError) {
+        return function(resp) {
+            _streamingRequest = null;
+            if (resp.statuscode == 307 && "location" in resp.headers) {
+                // set new location
+                local location = resp.headers["location"];
+                local p = location.find("." + _domain + "/") + ("." + _domain + "/").len()
+                _baseUrl = location.slice(0, p);
+                return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
+            } else if (resp.statuscode == 28 || resp.statuscode == 429) {
+                // if we timed out, just reconnect after a small delay
+                imp.wakeup(0, function() { return stream(path, onError); }.bindenv(this));
+            } else {
+                // Otherwise log an error (if enabled)
+                _logError("Stream closed with error " + resp.statuscode);
+
+                // Invoke our error handler
+                imp.wakeup(0, function() { onError(resp); });
+            }
+        };
+    }
+
+    // Stream Callback
+    //TODO: We are not currently explicitly handling https://www.firebase.com/docs/rest/api/#section-streaming-cancel and https://www.firebase.com/docs/rest/api/#section-streaming-auth-revoked
+    function _onStreamDataFactory(path, onError) {
+        return function(messageString) {
+            // Tickle the keep alive timer
+            if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
+            _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
+
+            local messages = _parseEventMessage(messageString);
+            foreach (message in messages) {
+                // Update the internal cache
+                _updateCache(message);
+
+                // Check out every callback for matching path
+                foreach (path,callback in _callbacks) {
+
+                    if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
+                        // This is an exact match or a subbranch
+
+                        // Create local instance of message for the callback
+                        local thisMessage = message;
+                        imp.wakeup(0, function() { callback(thisMessage.path, thisMessage.data); }.bindenv(this));
+                    } else if (message.event == "patch") {
+                        // This is a patch for a (potentially) parent node
+                        foreach (head,body in message.data) {
+                            local newmessagepath = ((message.path == "/") ? "" : message.path) + "/" + head;
+                            if (newmessagepath == path) {
+                                // We have found a superbranch that matches, rewrite this as a PUT
+                                local subdata = _getDataFromPath(newmessagepath, message.path, _data);
+                                imp.wakeup(0, function() { callback(newmessagepath, subdata); }.bindenv(this));
+                            }
+                        }
+                    } else if (message.path == "/" || path.find(message.path + "/") == 0) {
+                        // This is the root or a superbranch for a put or delete
+                        local subdata = _getDataFromPath(path, message.path, _data);
+
+                        // Create local instance of path for the callback
+                        local thisPath = path;
+                        imp.wakeup(0, function() { callback(thisPath, subdata); }.bindenv(this));
+                    }
+                }
+            }
+        };
+    }
+
     // No keep alive has been seen for a while, lets reconnect
     function _onKeepAliveExpiredFactory(path, onError) {
         return function() {
@@ -363,7 +361,7 @@ class Firebase {
             if (lines.len() == 3 && lines[0] == "{" && lines[2] == "}") {
                 local error = http.jsondecode(text);
                 _logError("Firebase error message: " + error.error);
-                continue;
+                continue;   //The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
             }
 
             // get the event
