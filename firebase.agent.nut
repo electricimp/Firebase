@@ -3,7 +3,7 @@
 // ============================================================================{
 class Firebase {
     // Library version
-    static version = [1,0,1];
+    static version = [2,0,0];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -52,14 +52,15 @@ class Firebase {
      *      true -  otherwise
      * Parameters:
      *      path - the path of the node we're listending to (without .json)
+     *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
      *      onError - custom error handler for streaming API
      **************************************************************************/
-    function stream(path = "", onError = null) {
+    function stream(path = "", uriParams = null, onError = null) {
         // if we already have a stream open, don't open a new one
         if (isStreaming()) return false;
 
         if (onError == null) onError = _defaultErrorHandler.bindenv(this);
-        _streamingRequest = http.get(_buildUrl(path), _streamingHeaders);
+        _streamingRequest = http.get(_buildUrl(path, uriParams), _streamingHeaders);
         _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
 
         _streamingRequest.sendasync(
@@ -141,11 +142,12 @@ class Firebase {
      *      nothing
      * Parameters:
      *      path     - the path of the node we're reading
+     *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
      *      callback - a callback function with one parameter (data) to be
      *                 executed once the data is read
      **************************************************************************/
-     function read(path, callback = null) {
-        local request = http.get(_buildUrl(path), _defaultHeaders)
+     function read(path, uriParams = null, callback = null) {
+        local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
         request.sendasync(function(res) {
             if (callback) {
@@ -256,7 +258,7 @@ class Firebase {
 
     /************ Private Functions (DO NOT CALL FUNCTIONS BELOW) ************/
     // Builds a url to send a request to
-    function _buildUrl(path) {
+    function _buildUrl(path, uriParams = null) {
         // Normalise the /'s
         // _baseUrl = <_baseUrl>
         // path = <path>
@@ -264,8 +266,28 @@ class Firebase {
         if (path.len() > 0 && path[0] == '/') path = path.slice(1);
 
         local url = _baseUrl + "/" + path + ".json";
-        url += "?ns=" + _db;
-        if (_auth != null) url = url + "&auth=" + _auth;
+
+        if(typeof(uriParams) != "table") uriParams = {}
+
+
+        local quoteWrappedKeys = [
+            "startAt",
+            "endAt" ,
+            "equalTo",
+            "orderBy"
+        ]
+
+        foreach(key, value in uriParams){
+            if(quoteWrappedKeys.find(key) != null && typeof(value) == "string") uriParams[key] = "\"" + value + "\""
+        }
+
+        //TODO: Right now we aren't doing any kind of checking on the uriParams - we are trusting that Firebase will throw errors as necessary
+
+        // Use instance values if these keys aren't provided
+        if(!("ns" in uriParams)) uriParams.ns <- _db;
+        if(!("auth" in uriParams) && _auth !=null) uriParams.auth <- _auth
+
+        url += "?" + http.urlencode(uriParams)
 
         return url;
     }
