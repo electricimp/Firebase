@@ -60,6 +60,7 @@ class Firebase {
 
         if (onError == null) onError = _defaultErrorHandler.bindenv(this);
         _streamingRequest = http.get(_buildUrl(path), _streamingHeaders);
+        _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
 
         _streamingRequest.sendasync(
             _onStreamExitFactory(path, onError).bindenv(this),
@@ -144,7 +145,9 @@ class Firebase {
      *                 executed once the data is read
      **************************************************************************/
      function read(path, callback = null) {
-        http.get(_buildUrl(path), _defaultHeaders).sendasync(function(res) {
+        local request = http.get(_buildUrl(path), _defaultHeaders)
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) {
                 local data = null;
                 try {
@@ -173,7 +176,9 @@ class Firebase {
      **************************************************************************/
     function push(path, data, priority = null, callback = null) {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
-        http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data)).sendasync(function(res) {
+        local request = http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Push: Firebase responded " + res.statuscode + " to changes to " + path)
@@ -194,7 +199,9 @@ class Firebase {
      *      data     - the data we're writing
      **************************************************************************/
     function write(path, data, callback = null) {
-        http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data)).sendasync(function(res) {
+        local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Write: Firebase responded " + res.statuscode + " to changes to " + path)
@@ -216,7 +223,9 @@ class Firebase {
      **************************************************************************/
     function update(path, data, callback = null) {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
-        http.request("PATCH", _buildUrl(path), _defaultHeaders, data).sendasync(function(res) {
+        local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Update: Firebase responded " + res.statuscode + " to changes to " + path)
@@ -235,7 +244,9 @@ class Firebase {
      *      path     - the path of the node we're deleting
      **************************************************************************/
     function remove(path, callback = null) {
-        http.httpdelete(_buildUrl(path), _defaultHeaders).sendasync(function(res) {
+        local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Delete: Firebase responded " + res.statuscode + " to changes to " + path)
