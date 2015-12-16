@@ -69,14 +69,14 @@ class Firebase {
         _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
 
         _streamingRequest.sendasync(
-            _onStreamExitFactory(path, onError).bindenv(this),
-            _onStreamDataFactory(path, onError).bindenv(this),
+            _onStreamExitFactory(path, onError),
+            _onStreamDataFactory(path, onError),
             NO_TIMEOUT
         );
 
         // Tickle the keepalive timer
         if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
-        _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError).bindenv(this));
+        _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
 
         // Return true if we opened the stream
         return true;
@@ -328,7 +328,7 @@ class Firebase {
                 // Invoke our error handler
                 imp.wakeup(0, function() { onError(resp); });
             }
-        };
+        }.bindenv(this);
     }
 
     // Stream Callback
@@ -373,7 +373,7 @@ class Firebase {
                     }
                 }
             }
-        };
+        }.bindenv(this);
     }
 
     // No keep alive has been seen for a while, lets reconnect
