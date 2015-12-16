@@ -1,10 +1,10 @@
-# Firebase v1.0.0
+# Firebase v1.1.0
 
 The Firebase library allows you to easily integrate with Firebase's realtime backend, which includes data storage, user authentication, static hosting, and more.
 
-**To add this library to your project, add `#require "Firebase.class.nut:1.0.0"` to the top of your agent code.**
+**To add this library to your project, add `#require "Firebase.class.nut:1.1.0"` to the top of your agent code.**
 
-You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.0.0).
+You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.1.0).
 
 ## Class Usage
 
@@ -22,7 +22,7 @@ The Firebase class must be instantiated with an instance name, and optionally an
 The domain and instance are used to construct the url requests are made against in the following was: https://{instance}.{domain}
 
 ```squirrel
-#require "Firebase.class.nut:1.0.0"
+#require "Firebase.class.nut:1.1.0"
 
 const FIREBASE_AUTH_KEY = "<-- Your Firebase Auth Key -->"
 
@@ -65,13 +65,15 @@ firebase.stream();
 
 **NOTE:** You must call the .stream method (see below) in order to open a realtime stream with Firebase and have the registered callbacks invoked.
 
-### steam(*[path, onErrorCallback]*)
+### stream(*[path, uriParams, onErrorCallback]*)
 
 Creates a streaming request using the *path* as the base address to track. If no *path* is supplied, the root of the instance ("/") will be used.
 
+An optional table of *uriParams* can be supplied in order to use Firebase queries.
+
 An optional onErrorCallback parameter can be supplied that will be invoked if errors occur while making streaming requests.
 
-If no onErrorCallback is not supplied, the Firebase class will attempt to silently and automatically reconnect when it encounters an error. If an onErrorCallback is supplied, it is up to the developer to re-initiate the steam() request in the onErrorCallback.
+If no onErrorCallback is supplied, the Firebase class will attempt to silently and automatically reconnect when it encounters an error. If an onErrorCallback is supplied, it is up to the developer to re-initiate the stream() request in the onErrorCallback.
 
 The onErrorCallback takes a single parameter - the [HTTP Response Table](https://electricimp.com/docs/api/httprequest/sendasync/) from the request.
 
@@ -114,7 +116,7 @@ firebase.on("/settings", function(path, data) {
 });
 ```
 
-### read(*path, callback*)
+### read(*path, [uriParams], [callback]*)
 Reads data from the specified path (i.e. performs a GET request).
 
 ```squirrel
@@ -124,6 +126,24 @@ firebase.read("/settings", function(data) {
         server.log(setting + ": " + value);
     }
 });
+```
+
+Query Parameters can also be passed in as a table of arguments to uriParams
+```squirrel
+fbDino <- Firebase("dinosaur-facts")
+
+// Perform a shallow query to get the list of keys at this location
+fbDino.read("/dinosaurs", {"shallow": true}, function(data){
+    server.log(http.jsonencode(data))
+    // Logs: { "lambeosaurus": true, "linhenykus": true, "triceratops": true, "stegosaurus": true, "bruhathkayosaurus": true, "pterodactyl": true }
+})
+
+// The \uf8ff character used in the query above is a very high code point in the Unicode range.
+// Because it is after most regular characters in Unicode, the query matches all values that start with a b.
+fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff"}, function(data){
+    server.log(http.jsonencode(data))
+    //Logs { "bruhathkayosaurus": { "appeared": -70000000, "vanished": -70000000, "order": "saurischia", "length": 44, "weight": 135000, "height": 25 } }
+})
 ```
 
 ### write(*path, data, [callback]*)
@@ -192,4 +212,3 @@ device.on("no-tracking", function(data) {
 
 ## License
 The Firebase class is licensed under [MIT License](https://github.com/electricimp/Firebase/tree/master/LICENSE).
-

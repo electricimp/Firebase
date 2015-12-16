@@ -1,12 +1,17 @@
+// Copyright (c) 2015 Electric Imp
+// This file is licensed under the MIT License
+// http://opensource.org/licenses/MIT
+
 class Firebase {
     // Library version
-    static version = [1,0,0];
+    static version = [1,1,0];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
     _db = null;                 // The name of your firebase instance
     _auth = null;               // _auth key (if auth is enabled)
     _baseUrl = null;            // base url (may change with 307 responses)
+    _domain = null;
 
     // Debugging
     _debug = null;              // Debug flag, when true, class will log errors
@@ -32,6 +37,7 @@ class Firebase {
         _debug = debug;
 
         _db = db;
+        _domain = domain;
         _baseUrl = "https://" + _db + "." + domain;
         _auth = auth;
 
@@ -47,18 +53,24 @@ class Firebase {
      *      true -  otherwise
      * Parameters:
      *      path - the path of the node we're listending to (without .json)
+     *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
      *      onError - custom error handler for streaming API
      **************************************************************************/
-    function stream(path = "", onError = null) {
+    function stream(path = "", uriParams = null, onError = null) {
         // if we already have a stream open, don't open a new one
         if (isStreaming()) return false;
 
+        if (typeof uriParams == "function") {
+            onError = uriParams;
+            uriParams = null;
+        }
         if (onError == null) onError = _defaultErrorHandler.bindenv(this);
-        _streamingRequest = http.get(_buildUrl(path), _streamingHeaders);
+        _streamingRequest = http.get(_buildUrl(path, uriParams), _streamingHeaders);
+        _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
 
         _streamingRequest.sendasync(
-            _onStreamExitFactory(path, onError).bindenv(this),
-            _onStreamDataFactory(path, onError).bindenv(this),
+            _onStreamExitFactory(path, onError),
+            _onStreamDataFactory(path, onError),
             NO_TIMEOUT
         );
 
@@ -68,76 +80,6 @@ class Firebase {
 
         // Return true if we opened the stream
         return true;
-    }
-
-    // Stream Callback
-    function _onStreamExitFactory(path, onError) {
-        return function(resp) {
-            _streamingRequest = null;
-            if (resp.statuscode == 307 && "location" in resp.headers) {
-                // set new location
-                local location = resp.headers["location"];
-                local p = location.find(".firebaseio.com")+16;
-                _baseUrl = location.slice(0, p);
-                return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
-            } else if (resp.statuscode == 28 || resp.statuscode == 429) {
-                // if we timed out, just reconnect after a small delay
-                imp.wakeup(0, function() { return stream(path, onError); }.bindenv(this));
-            } else {
-                // If there's an onError callback, invoke it
-                if (onError != null) {
-                    imp.wakeup(0, function() { onError(resp); });
-                    return;
-                }
-                // Otherwise log an error (if enabled) and reconnect
-                _logError("Stream closed with error " + resp.statuscode);
-                imp.wakeup(1, function() { return stream(path, onError); }.bindenv(this))
-            }
-        };
-    }
-
-    // Stream Callback
-    function _onStreamDataFactory(path, onError) {
-        return function(messageString) {
-            // Tickle the keep alive timer
-            if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
-            _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
-
-            local messages = _parseEventMessage(messageString);
-            foreach (message in messages) {
-                // Update the internal cache
-                _updateCache(message);
-
-                // Check out every callback for matching path
-                foreach (path,callback in _callbacks) {
-
-                    if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
-                        // This is an exact match or a subbranch
-
-                        // Create local instance of message for the callback
-                        local thisMessage = message;
-                        imp.wakeup(0, function() { callback(thisMessage.path, thisMessage.data); }.bindenv(this));
-                    } else if (message.event == "patch") {
-                        // This is a patch for a (potentially) parent node
-                        foreach (head,body in message.data) {
-                            local newmessagepath = ((message.path == "/") ? "" : message.path) + "/" + head;
-                            if (newmessagepath == path) {
-                                // We have found a superbranch that matches, rewrite this as a PUT
-                                local subdata = _getDataFromPath(newmessagepath, message.path, _data);
-                                imp.wakeup(0, function() { callback(newmessagepath, subdata); }.bindenv(this));
-                            }
-                        }
-                    } else if (message.path == "/" || path.find(message.path + "/") == 0) {
-                        // This is the root or a superbranch for a put or delete
-                        local subdata = _getDataFromPath(path, message.path, _data);
-
-                        // Create local instance of path for the callback
-                        local thisPath = path;
-                        imp.wakeup(0, function() { callback(thisPath, subdata); }.bindenv(this));
-                    }
-                }
-            }
-        };
     }
 
     /***************************************************************************
@@ -205,11 +147,18 @@ class Firebase {
      *      nothing
      * Parameters:
      *      path     - the path of the node we're reading
+     *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
      *      callback - a callback function with one parameter (data) to be
      *                 executed once the data is read
      **************************************************************************/
-     function read(path, callback = null) {
-        http.get(_buildUrl(path), _defaultHeaders).sendasync(function(res) {
+     function read(path, uriParams = null, callback = null) {
+        if (typeof uriParams == "function") {
+            callback = uriParams;
+            uriParams = null;
+        }
+        local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) {
                 local data = null;
                 try {
@@ -238,7 +187,9 @@ class Firebase {
      **************************************************************************/
     function push(path, data, priority = null, callback = null) {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
-        http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data)).sendasync(function(res) {
+        local request = http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Push: Firebase responded " + res.statuscode + " to changes to " + path)
@@ -259,7 +210,9 @@ class Firebase {
      *      data     - the data we're writing
      **************************************************************************/
     function write(path, data, callback = null) {
-        http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data)).sendasync(function(res) {
+        local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Write: Firebase responded " + res.statuscode + " to changes to " + path)
@@ -281,7 +234,9 @@ class Firebase {
      **************************************************************************/
     function update(path, data, callback = null) {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
-        http.request("PATCH", _buildUrl(path), _defaultHeaders, data).sendasync(function(res) {
+        local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Update: Firebase responded " + res.statuscode + " to changes to " + path)
@@ -300,7 +255,9 @@ class Firebase {
      *      path     - the path of the node we're deleting
      **************************************************************************/
     function remove(path, callback = null) {
-        http.httpdelete(_buildUrl(path), _defaultHeaders).sendasync(function(res) {
+        local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
+        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+        request.sendasync(function(res) {
             if (callback) callback(res);
             else if (res.statuscode != 200) {
                 _logError("Delete: Firebase responded " + res.statuscode + " to changes to " + path)
@@ -310,7 +267,7 @@ class Firebase {
 
     /************ Private Functions (DO NOT CALL FUNCTIONS BELOW) ************/
     // Builds a url to send a request to
-    function _buildUrl(path) {
+    function _buildUrl(path, uriParams = null) {
         // Normalise the /'s
         // _baseUrl = <_baseUrl>
         // path = <path>
@@ -318,8 +275,28 @@ class Firebase {
         if (path.len() > 0 && path[0] == '/') path = path.slice(1);
 
         local url = _baseUrl + "/" + path + ".json";
-        url += "?ns=" + _db;
-        if (_auth != null) url = url + "&_auth=" + _auth;
+
+        if(typeof(uriParams) != "table") uriParams = {}
+
+
+        local quoteWrappedKeys = [
+            "startAt",
+            "endAt" ,
+            "equalTo",
+            "orderBy"
+        ]
+
+        foreach(key, value in uriParams){
+            if(quoteWrappedKeys.find(key) != null && typeof(value) == "string") uriParams[key] = "\"" + value + "\""
+        }
+
+        //TODO: Right now we aren't doing any kind of checking on the uriParams - we are trusting that Firebase will throw errors as necessary
+
+        // Use instance values if these keys aren't provided
+        if(!("ns" in uriParams)) uriParams.ns <- _db;
+        if(!("auth" in uriParams) && _auth !=null) uriParams.auth <- _auth
+
+        url += "?" + http.urlencode(uriParams)
 
         return url;
     }
@@ -329,6 +306,74 @@ class Firebase {
         foreach (error in errors) {
             _logError("ERROR " + error.code + ": " + error.message);
         }
+    }
+
+    // Stream Callback
+    function _onStreamExitFactory(path, onError) {
+        return function(resp) {
+            _streamingRequest = null;
+            if (resp.statuscode == 307 && "location" in resp.headers) {
+                // set new location
+                local location = resp.headers["location"];
+                local p = location.find("." + _domain + "/") + ("." + _domain + "/").len()
+                _baseUrl = location.slice(0, p);
+                return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
+            } else if (resp.statuscode == 28 || resp.statuscode == 429) {
+                // if we timed out, just reconnect after a small delay
+                imp.wakeup(0, function() { return stream(path, onError); }.bindenv(this));
+            } else {
+                // Otherwise log an error (if enabled)
+                _logError("Stream closed with error " + resp.statuscode);
+
+                // Invoke our error handler
+                imp.wakeup(0, function() { onError(resp); });
+            }
+        }.bindenv(this);
+    }
+
+    // Stream Callback
+    //TODO: We are not currently explicitly handling https://www.firebase.com/docs/rest/api/#section-streaming-cancel and https://www.firebase.com/docs/rest/api/#section-streaming-auth-revoked
+    function _onStreamDataFactory(path, onError) {
+        return function(messageString) {
+            // Tickle the keep alive timer
+            if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
+            _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
+
+            local messages = _parseEventMessage(messageString);
+            foreach (message in messages) {
+                // Update the internal cache
+                _updateCache(message);
+
+                // Check out every callback for matching path
+                foreach (path,callback in _callbacks) {
+
+                    if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
+                        // This is an exact match or a subbranch
+
+                        // Create local instance of message for the callback
+                        local thisMessage = message;
+                        imp.wakeup(0, function() { callback(thisMessage.path, thisMessage.data); }.bindenv(this));
+                    } else if (message.event == "patch") {
+                        // This is a patch for a (potentially) parent node
+                        foreach (head,body in message.data) {
+                            local newmessagepath = ((message.path == "/") ? "" : message.path) + "/" + head;
+                            if (newmessagepath == path) {
+                                // We have found a superbranch that matches, rewrite this as a PUT
+                                local subdata = _getDataFromPath(newmessagepath, message.path, _data);
+                                imp.wakeup(0, function() { callback(newmessagepath, subdata); }.bindenv(this));
+                            }
+                        }
+                    } else if (message.path == "/" || path.find(message.path + "/") == 0) {
+                        // This is the root or a superbranch for a put or delete
+                        local subdata = _getDataFromPath(path, message.path, _data);
+
+                        // Create local instance of path for the callback
+                        local thisPath = path;
+                        imp.wakeup(0, function() { callback(thisPath, subdata); }.bindenv(this));
+                    }
+                }
+            }
+        }.bindenv(this);
     }
 
     // No keep alive has been seen for a while, lets reconnect
@@ -361,7 +406,7 @@ class Firebase {
             if (lines.len() == 3 && lines[0] == "{" && lines[2] == "}") {
                 local error = http.jsondecode(text);
                 _logError("Firebase error message: " + error.error);
-                continue;
+                continue;   //The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
             }
 
             // get the event
