@@ -3,7 +3,7 @@
 // ============================================================================{
 class Firebase {
     // Library version
-    static version = [2,0,0];
+    static version = [1,1,0];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -59,6 +59,10 @@ class Firebase {
         // if we already have a stream open, don't open a new one
         if (isStreaming()) return false;
 
+        if (typeof uriParams == "function") {
+            onError = uriParams;
+            uriParams = null;
+        }
         if (onError == null) onError = _defaultErrorHandler.bindenv(this);
         _streamingRequest = http.get(_buildUrl(path, uriParams), _streamingHeaders);
         _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
@@ -147,6 +151,10 @@ class Firebase {
      *                 executed once the data is read
      **************************************************************************/
      function read(path, uriParams = null, callback = null) {
+        if (typeof uriParams == "function") {
+            callback = uriParams;
+            uriParams = null;
+        }
         local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
         request.sendasync(function(res) {
