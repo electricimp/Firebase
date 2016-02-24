@@ -2,7 +2,7 @@
 
 The Firebase library allows you to easily integrate with Firebase's realtime backend, which includes data storage, user authentication, static hosting, and more.
 
-**To add this library to your project, add `#require "Firebase.class.nut:1.1.0"` to the top of your agent code.**
+**To add this library to your project, add `#require "Firebase.class.nut:1.1.1"` to the top of your agent code.**
 
 You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.1.0).
 
@@ -22,7 +22,7 @@ The Firebase class must be instantiated with an instance name, and optionally an
 The domain and instance are used to construct the url requests are made against in the following was: https://{instance}.{domain}
 
 ```squirrel
-#require "Firebase.class.nut:1.1.0"
+#require "Firebase.class.nut:1.1.1"
 
 const FIREBASE_AUTH_KEY = "<-- Your Firebase Auth Key -->"
 

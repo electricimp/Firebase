@@ -4,7 +4,7 @@
 
 class Firebase {
     // Library version
-    static version = [1,1,0];
+    static version = [1,1,1];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -370,7 +370,7 @@ class Firebase {
 
                         // Create local instance of path and callback
                         local thisPath = path;
-						local thisCallback = callback;
+		local thisCallback = callback;
                         imp.wakeup(0, function() { thisCallback(thisPath, subdata); }.bindenv(this));
                     }
                 }
