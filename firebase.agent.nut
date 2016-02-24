@@ -315,7 +315,8 @@ class Firebase {
             if (resp.statuscode == 307 && "location" in resp.headers) {
                 // set new location
                 local location = resp.headers["location"];
-                local p = location.find("." + _domain + "/") + ("." + _domain + "/").len()
+                local p = location.find("." + _domain);
+                p = location.find("/", p);
                 _baseUrl = location.slice(0, p);
                 return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
             } else if (resp.statuscode == 28 || resp.statuscode == 429) {
@@ -367,9 +368,10 @@ class Firebase {
                         // This is the root or a superbranch for a put or delete
                         local subdata = _getDataFromPath(path, message.path, _data);
 
-                        // Create local instance of path for the callback
+                        // Create local instance of path and callback
                         local thisPath = path;
-                        imp.wakeup(0, function() { callback(thisPath, subdata); }.bindenv(this));
+						local thisCallback = callback;
+                        imp.wakeup(0, function() { thisCallback(thisPath, subdata); }.bindenv(this));
                     }
                 }
             }
