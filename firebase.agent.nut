@@ -367,8 +367,9 @@ class Firebase {
                         // This is the root or a superbranch for a put or delete
                         local subdata = _getDataFromPath(path, message.path, _data);
 
-                        // Create local instance of path for the callback
+                        // Create local instance of path and callback
                         local thisPath = path;
+                        local thisCallback = callback;
                         imp.wakeup(0, function() { callback(thisPath, subdata); }.bindenv(this));
                     }
                 }
