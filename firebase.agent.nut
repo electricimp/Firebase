@@ -315,7 +315,8 @@ class Firebase {
             if (resp.statuscode == 307 && "location" in resp.headers) {
                 // set new location
                 local location = resp.headers["location"];
-                local p = location.find("." + _domain + "/") + ("." + _domain + "/").len()
+                local p = location.find("." + _domain);
+                p = location.find("/", p);
                 _baseUrl = location.slice(0, p);
                 return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
             } else if (resp.statuscode == 28 || resp.statuscode == 429) {
