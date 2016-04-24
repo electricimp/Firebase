@@ -12,22 +12,37 @@ class BasicTestCase extends ImpTestCase {
 
     function test01_write() {
         return Promise(function (ok, err) {
-
             local data = math.rand() + "" + math.rand();
 
-            this._firebase.write(this.session, data, function(response) {
+            this._firebase.write(this.session, data, function (response) {
+                response.body = http.jsondecode(response.body);
                 if (response.statuscode >= 400) {
-                    err(http.jsondecode(response.body).error);
+                    err(response.body.error);
                 } else {
                     try {
-                        this.assertEqual(data, http.jsondecode(response.body));
-                        ok();
+                        this.assertEqual(data, response.body);
+                        ok("Written test data at \"/"+ this.session + "\"");
                     } catch (e) {
                         err(e);
                     }
                 }
             }.bindenv(this));
+        }.bindenv(this))
+    }
 
+    /**
+     * Deletes test data
+     */
+    function tearDown() {
+        return Promise(function (ok, err) {
+            this._firebase.remove(this.session, function (response) {
+                response.body = http.jsondecode(response.body);
+                if (response.statuscode >= 400) {
+                    err(response.body.error);
+                } else {
+                    ok("Removed test data at \"/"+ this.session + "\"");
+                }
+            }.bindenv(this));
         }.bindenv(this))
     }
 }
