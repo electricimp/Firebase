@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=develop)](https://travis-ci.org/electricimp/JSONParser)
+
 # Firebase v1.1.1
 
 The Firebase library allows you to easily integrate with Firebase's realtime backend, which includes data storage, user authentication, static hosting, and more.
