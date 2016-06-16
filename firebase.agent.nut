@@ -383,11 +383,9 @@ class Firebase {
 
     // parses event messages
     function _parseEventMessage(text) {
-        ::pp.print(text);
         // split message into parts
         local alllines = split(text, "\n");
         if (alllines.len() < 2) return [];
-        ::pp.print(alllines);
         local returns = [];
         for (local i = 0; i < alllines.len(); ) {
             local lines = [];
