@@ -1,12 +1,16 @@
 [![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=develop)](https://travis-ci.org/electricimp/JSONParser)
 
-# Firebase v1.1.1
+# Firebase v1.2.1
 
 The Firebase library allows you to easily integrate with Firebase's realtime backend, which includes data storage, user authentication, static hosting, and more.
 
-**To add this library to your project, add `#require "Firebase.class.nut:1.1.1"` to the top of your agent code.**
+You can also include Promise library [GitHub](https://github.com/electricimp/Promise/) so it will return a Promise object when callbacks for read() , write(), remove (),update(), push() are not provided .
 
-You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.1.1).
+**To add this library to your project, add `#require "Firebase.class.nut:1.2.1"` to the top of your agent code.**
+
+**To add Promise library to your project, add `#require "promise.class.nut:3.0.0"` to the top of your agent code.**
+
+You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.2.1).
 
 ## Class Usage
 
@@ -24,7 +28,7 @@ The Firebase class must be instantiated with an instance name, and optionally an
 The domain and instance are used to construct the url requests are made against in the following was: https://{instance}.{domain}
 
 ```squirrel
-#require "Firebase.class.nut:1.1.1"
+#require "Firebase.class.nut:1.2.1"
 
 const FIREBASE_AUTH_KEY = "<-- Your Firebase Auth Key -->"
 
@@ -119,14 +123,19 @@ firebase.on("/settings", function(path, data) {
 ```
 
 ### read(*path, [uriParams], [callback]*)
-Reads data from the specified path (i.e. performs a GET request).
+Reads data from the specified path (i.e. performs a GET request). Return a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 // Read all the settings:
-firebase.read("/settings", function(data) {
-    foreach(setting, value in data) {
-        server.log(setting + ": " + value);
+firebase.read("/settings", function(error,data) {
+    if (error)  {
+        server.error(error);
+    } else {
+        foreach(setting, value in data) {
+            server.log(setting + ": " + value);
+        }
     }
+
 });
 ```
 
@@ -135,29 +144,33 @@ Query Parameters can also be passed in as a table of arguments to uriParams
 fbDino <- Firebase("dinosaur-facts")
 
 // Perform a shallow query to get the list of keys at this location
-fbDino.read("/dinosaurs", {"shallow": true}, function(data){
+fbDino.read("/dinosaurs", {"shallow": true}, function(error,data){
     server.log(http.jsonencode(data))
     // Logs: { "lambeosaurus": true, "linhenykus": true, "triceratops": true, "stegosaurus": true, "bruhathkayosaurus": true, "pterodactyl": true }
 })
 
 // The \uf8ff character used in the query above is a very high code point in the Unicode range.
 // Because it is after most regular characters in Unicode, the query matches all values that start with a b.
-fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff"}, function(data){
+fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff"}, function(error,data){
     server.log(http.jsonencode(data))
     //Logs { "bruhathkayosaurus": { "appeared": -70000000, "vanished": -70000000, "order": "saurischia", "length": 44, "weight": 135000, "height": 25 } }
 })
 ```
 
 ### write(*path, data, [callback]*)
-Updates data at the specified path (i.e. performs a PUT request).
+Updates data at the specified path (i.e. performs a PUT request). Return a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 // When we get a new state
 device.on("newState", function(state) {
     // Write the state to Firebase
-    firebase.write("/current/state", state, function(resp) {
+    firebase.write("/current/state", state, function(error,data) {
         // If there was an error during the write, log it
-        if (resp.statuscode != 200) server.error(resp.body);
+        if (error)  {
+            server.error(error);
+        } else {
+            server.log(data);
+        }
     });
 });
 ```
@@ -165,19 +178,24 @@ device.on("newState", function(state) {
 **NOTE:** When you write to a specific path you replace all of the data at that path (and all paths below it).
 
 ### update(*path, data, [callback]*)
-Updates a subset of data at a particular path (i.e. performs a PATCH request).
+Updates a subset of data at a particular path (i.e. performs a PATCH request). Return a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 device.on("newLocation", function(location) {
     // Update the location in the settings:
-    firebase.update("/settings", { "location": location }, function(resp) {
-        if (resp.statuscode != 200) server.error(resp.body);
+    firebase.update("/settings", { "location": location }, function(error,data) {
+        if (error)  {
+            server.error(error);
+        } else {
+            server.log(data);
+        }
     });
 });
 ```
 
 ### push(*path, data, [priority, callback]*)
 Pushes data to the specified path (i.e. performs a POST request). This function should be used when you're adding an item to a list.
+Return a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 device.on("temps", function(data) {
@@ -194,19 +212,18 @@ device.on("temps", function(data) {
 ```
 
 ### remove(*path, [callback]*)
-Deletes data at the specified path (i.e. performs a DELETE request).
+Deletes data at the specified path (i.e. performs a DELETE request). Return a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 // If the user opts out of tracking:
 device.on("no-tracking", function(data) {
     // Delete the location information from Firebase
-    firebase.remove("/settings/location", function(resp) {
+    firebase.remove("/settings/location", function(error,data) {
         // If there was an error
-        if (resp.statuscode != 200) {
-            // Log it
-            server.error(resp.body)
-            // Send a message to the user to indicate it failed
-            device.send("no-tracking-failed", null);
+        if (error)  {
+        server.error(error);
+        } else {
+        server.log(data);
         }
     });
 });
