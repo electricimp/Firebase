@@ -66,8 +66,12 @@ class BasicTestCase extends ImpTestCase {
         return Promise(function (ok, err) {
             this._firebase.write(".settings/rules",
                 rules,
-                function (res) {
-                    ok();
+                function (error, res) {
+                    if (error) {
+                        err(error);
+                    } else {
+                        ok();
+                    }
                 }.bindenv(this));
         }.bindenv(this))
     }
@@ -77,13 +81,12 @@ class BasicTestCase extends ImpTestCase {
      */
     function test02_write() {
         return Promise(function (ok, err) {
-            this._firebase.write(this._path, this._dinos, function (response) {
-                response.body = http.jsondecode(response.body);
-                if (response.statuscode >= 400) {
-                    err(response.body.error);
+            this._firebase.write(this._path, this._dinos, function (error, response) {
+                if (error) {
+                    err(error);
                 } else {
                     try {
-                        this.assertDeepEqual(this._dinos, response.body);
+                        this.assertDeepEqual(this._dinos, response);
                         ok("Written test data at \""+ this._path + "\"");
                     } catch (e) {
                         err(e);
@@ -98,12 +101,16 @@ class BasicTestCase extends ImpTestCase {
      */
     function test03_readKeys() {
         return Promise(function (ok, err) {
-            this._firebase.read(this._path, {"shallow": true}, function (data) {
-                try {
-                    this.assertDeepEqual({"Velociraptor":true,"Homalocephale":true,"Herrerasaurus":true,"Acrocanthosaurus":true,"Euoplocephalus":true}, data);
-                    ok();
-                } catch (e) {
-                    err(e);
+            this._firebase.read(this._path, {"shallow": true}, function (error, data) {
+                if (error) {
+                    err(error);
+                } else {
+                    try {
+                        this.assertDeepEqual({"Velociraptor":true,"Homalocephale":true,"Herrerasaurus":true,"Acrocanthosaurus":true,"Euoplocephalus":true}, data);
+                        ok();
+                    } catch (e) {
+                        err(e);
+                    }
                 }
             }.bindenv(this));
         }.bindenv(this))
@@ -117,10 +124,9 @@ class BasicTestCase extends ImpTestCase {
     function tearDown() {
         return;
         return Promise(function (ok, err) {
-            this._firebase.remove(this._path, function (response) {
-                response.body = http.jsondecode(response.body);
-                if (response.statuscode >= 400) {
-                    err(response.body.error);
+            this._firebase.remove(this._path, function (error, response) {
+                if (error) {
+                    err(error);
                 } else {
                     ok("Removed test data at \""+ this._path + "\"");
                 }
