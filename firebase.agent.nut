@@ -3,7 +3,7 @@
 // http://opensource.org/licenses/MIT
 class Firebase {
     // Library version
-    static version = [1,2,1];
+    static version = [2,0,0];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -43,7 +43,7 @@ class Firebase {
         _data = {};
 
         _callbacks = {};
-        
+
         _promiseIncluded = ("Promise" in getroottable());
     }
 
@@ -161,7 +161,7 @@ class Firebase {
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
         if (callback) {
             _processResponse(request,callback);
-            
+
         } else {
             return  _returnPromise(request);
         }
@@ -207,7 +207,7 @@ class Firebase {
         local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
         if (callback) {
-            _processResponse(request,callback);           
+            _processResponse(request,callback);
         } else {
             return _returnPromise(request);
         }
@@ -231,7 +231,7 @@ class Firebase {
         local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
         if (callback) {
-            _processResponse(request,callback);          
+            _processResponse(request,callback);
         } else {
             return _returnPromise(request);
         }
@@ -252,13 +252,13 @@ class Firebase {
         local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
         if (callback) {
-            _processResponse(request,callback);          
+            _processResponse(request,callback);
         } else {
             return _returnPromise(request);
         }
 
     }
-    
+
 
     /************ Private Functions (DO NOT CALL FUNCTIONS BELOW) ************/
     // Builds a url to send a request to
@@ -566,7 +566,7 @@ class Firebase {
     function _logError(message) {
         if (_debug) server.error(message);
     }
-    
+
     // return a Promise if the Promise library is included
     function _returnPromise (request){
         if (_promiseIncluded) {
@@ -584,12 +584,12 @@ class Firebase {
                             reject (err);
                         }
                     }.bindenv(this));
-            });           
-        } 
-        return ;
+            });
+        }
+        return;
     }
-    
-    // process the http response accordingly 
+
+    // process the http response accordingly
     function _processResponse (request,callback) {
         request.sendasync(function(res) {
             local data = res.body ;

@@ -4,15 +4,19 @@
 
 The Firebase library allows you to easily integrate with Firebase's realtime backend, which includes data storage, user authentication, static hosting, and more.
 
-You can also include Promise library [GitHub](https://github.com/electricimp/Promise/) so it will return a Promise object when callbacks for read() , write(), remove (),update(), push() are not provided .
+**To add this library to your project, add `#require "Firebase.class.nut:2.0.0"` to the top of your agent code.**
 
-**To add this library to your project, add `#require "Firebase.class.nut:1.2.1"` to the top of your agent code.**
-
-**To add Promise library to your project, add `#require "promise.class.nut:3.0.0"` to the top of your agent code.**
-
-You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v1.2.1).
+You can view the library’s source code on [GitHub](https://github.com/electricimp/Firebase/tree/v2.0.0).
 
 ## Class Usage
+
+### Optional Callbacks/Promises
+
+The methods read(), write(), remove(), update(), and push() contain an optional *callback* parameter.  If a callback function is provided, it will be called when the response from Firebase is received.  The callback takes two required parameters, error and response.  If no error is encountered the error parameter will be null.
+
+As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/).  If the promise library is included the methods read(), write(), remove(), update(), and push() will return a promise if no callback is provided.
+
+**To add Promise library to your project, add `#require "promise.class.nut:3.0.0"` to the top of your agent code.**
 
 ### Constructor: Firebase(*instance, [auth, domain, debug]*)
 
@@ -28,11 +32,10 @@ The Firebase class must be instantiated with an instance name, and optionally an
 The domain and instance are used to construct the url requests are made against in the following was: https://{instance}.{domain}
 
 ```squirrel
-#require "Firebase.class.nut:1.2.1"
+const FIREBASE_NAME = "<-- Your Firebase Name -->";
+const FIREBASE_AUTH_KEY = "<-- Your Firebase Auth Key -->";
 
-const FIREBASE_AUTH_KEY = "<-- Your Firebase Auth Key -->"
-
-firebase <- Firebase("myfirebase", FIREBASE_AUTH_KEY)
+firebase <- Firebase(FIREBASE_NAME, FIREBASE_AUTH_KEY);
 ```
 
 ## Class Methods
@@ -41,7 +44,7 @@ firebase <- Firebase("myfirebase", FIREBASE_AUTH_KEY)
 
 Listens for changes at a particular location (*path*) or a node below *path*. When changes are detected, the callback method will be invoked. The callback method takes two parameters: *path* and *data*.
 
-The *path* parameter returns the full path of the node that was modified (this allows you to determin if the root of the path you're tracking changed, or if a node below it changed).
+The *path* parameter returns the full path of the node that was modified (this allows you to determine if the root of the path you're tracking changed, or if a node below it changed).
 
 The *data* parameter contains the modified data.
 
@@ -59,13 +62,17 @@ firebase.on("/settings", function(path, data) {
 });
 
 // Register a callback handler
-firebase.on("/current/state", function(state) {
+firebase.on("/current/state", function(path, state) {
+    server.log("Changes detected at: " + path);
+    server.log("New Data: " + http.jsonencode(state));
+
     // Send the new state to the device
-    device.send("newState", state);
+    if (state) {
+        device.send("newState", state);
+    }
 });
 
 // Open the stream to begin listening
-// (.on handlers will not execute if we don't call .stream)
 firebase.stream();
 ```
 
@@ -113,8 +120,8 @@ firebase.on("/settings", function(path, data) {
     // Check if the location setting changed
     if ("location" in data) {
         // if it did, grab the location data from Firebase
-        // use fromCache instead of read to avoide an unnecessary web request
-        local location = firebase.fromCache("/locations/" + data.location);
+        // use fromCache instead of read to avoid an unnecessary web request
+        local location = firebase.fromCache("/location" );
 
         // Send the new location information to the device
         device.send("updateLocation", location);
@@ -123,11 +130,11 @@ firebase.on("/settings", function(path, data) {
 ```
 
 ### read(*path, [uriParams], [callback]*)
-Reads data from the specified path (i.e. performs a GET request). Return a Promise when callback is not provided and Promise library is included.
+Reads data from the specified path (i.e. performs a GET request). Returns a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 // Read all the settings:
-firebase.read("/settings", function(error,data) {
+firebase.read("/settings", function(error, data) {
     if (error)  {
         server.error(error);
     } else {
@@ -135,7 +142,6 @@ firebase.read("/settings", function(error,data) {
             server.log(setting + ": " + value);
         }
     }
-
 });
 ```
 
@@ -158,13 +164,13 @@ fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff
 ```
 
 ### write(*path, data, [callback]*)
-Updates data at the specified path (i.e. performs a PUT request). Return a Promise when callback is not provided and Promise library is included.
+Updates data at the specified path (i.e. performs a PUT request). Returns a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 // When we get a new state
 device.on("newState", function(state) {
     // Write the state to Firebase
-    firebase.write("/current/state", state, function(error,data) {
+    firebase.write("/current/state", state, function(error, data) {
         // If there was an error during the write, log it
         if (error)  {
             server.error(error);
@@ -178,53 +184,59 @@ device.on("newState", function(state) {
 **NOTE:** When you write to a specific path you replace all of the data at that path (and all paths below it).
 
 ### update(*path, data, [callback]*)
-Updates a subset of data at a particular path (i.e. performs a PATCH request). Return a Promise when callback is not provided and Promise library is included.
+Updates a subset of data at a particular path (i.e. performs a PATCH request). Returns a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 device.on("newLocation", function(location) {
     // Update the location in the settings:
-    firebase.update("/settings", { "location": location }, function(error,data) {
+    firebase.update("/settings", { "location": location }, function(error, data) {
         if (error)  {
             server.error(error);
         } else {
-            server.log(data);
+            server.log(data.location);
         }
     });
 });
 ```
 
 ### push(*path, data, [priority, callback]*)
-Pushes data to the specified path (i.e. performs a POST request). This function should be used when you're adding an item to a list.
-Return a Promise when callback is not provided and Promise library is included.
+Pushes data to the specified path (i.e. performs a POST request). This function should be used when you're adding an item to a list. Returns a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
+// Example using promise instead of callback function
+local results = [];
+local fbKeys = [];
+
 device.on("temps", function(data) {
-    foreach(temp in data) {
+    foreach(reading in data) {
         local pushData = {
-            "deviceId": data.deviceId,
-            "timestamp": data.ts,
-            "temp": data.temp
+            "deviceId": reading.deviceId,
+            "timestamp": reading.ts,
+            "temp": reading.temp
         };
 
-        firebase.push("/temperatures", pushData);
+        results.push( firebase.push("/temperatures", pushData) );
     }
+
+    local p = Promise.all(results);
+    p.then(function(responses) {
+        foreach(res in responses) {
+            fbKeys.push(res.name);
+        }
+    })
 });
 ```
 
 ### remove(*path, [callback]*)
-Deletes data at the specified path (i.e. performs a DELETE request). Return a Promise when callback is not provided and Promise library is included.
+Deletes data at the specified path (i.e. performs a DELETE request). Returns a Promise when callback is not provided and Promise library is included.
 
 ```squirrel
 // If the user opts out of tracking:
 device.on("no-tracking", function(data) {
     // Delete the location information from Firebase
-    firebase.remove("/settings/location", function(error,data) {
+    firebase.remove("/settings/location", function(error, res) {
         // If there was an error
-        if (error)  {
-        server.error(error);
-        } else {
-        server.log(data);
-        }
+        if (error)  { server.error(error); }
     });
 });
 ```
