@@ -25,7 +25,7 @@ The Firebase class must be instantiated with an instance name, and optionally an
 | *instance*  | String | n/a                |          |
 | *auth*      | String | `null` (no authorization) | Optional |
 | *domain*    | String | `"firebaseio.com"`  | Optional |
-| *debug*    | Boolean   | `true`             | Optional. Set to `false` to supress error logging within<br>the Firebase class class |
+| *debug*    | Boolean   | `true`             | Optional. Set to `false` to supress error logging within<br>the Firebase class |
 
 The domain and instance are used to construct the url requests are made against in the following was: `https://{instance}.{domain}`.
 
