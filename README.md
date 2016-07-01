@@ -14,7 +14,7 @@ The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an 
 
 As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
-**To add Promise library to your project, add `#require "promise.class.nut:3.0.0"` to the top of your agent code.**
+**To add Promise library to your project, add** `#require "promise.class.nut:3.0.0"` **to the top of your agent code.**
 
 ### Constructor: Firebase(*instance[, authKey][, domain][, debug]*)
 
