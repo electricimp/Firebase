@@ -19,13 +19,12 @@ class BasicTestCase extends ImpTestCase {
      */
     function test01_write() {
         return Promise(function (ok, err) {
-            this._firebase.write(this._path, this._luckyNum, function (response) {
-                response.body = http.jsondecode(response.body);
-                if (response.statuscode >= 400) {
-                    err(response.body.error);
+            this._firebase.write(this._path, this._luckyNum, function (error, response) {
+                if (error) {
+                    err(error);
                 } else {
                     try {
-                        this.assertEqual(this._luckyNum, response.body);
+                        this.assertEqual(this._luckyNum, response);
                         ok("Written test data at \""+ this._path + "\"");
                     } catch (e) {
                         err(e);
@@ -40,12 +39,16 @@ class BasicTestCase extends ImpTestCase {
      */
     function test02_read() {
         return Promise(function (ok, err) {
-            this._firebase.read(this._path, function (data) {
-                try {
-                    this.assertEqual(this._luckyNum, data);
-                    ok("Read test data at \""+ this._path + "\"");
-                } catch (e) {
-                    err(e);
+            this._firebase.read(this._path, function (error, data) {
+                if (error) {
+                    err(error);
+                } else {
+                    try {
+                        this.assertEqual(this._luckyNum, data);
+                        ok("Read test data at \""+ this._path + "\"");
+                    } catch (e) {
+                        err(e);
+                    }
                 }
             }.bindenv(this));
         }.bindenv(this))
@@ -56,10 +59,9 @@ class BasicTestCase extends ImpTestCase {
      */
     function tearDown() {
         return Promise(function (ok, err) {
-            this._firebase.remove(this._path, function (response) {
-                response.body = http.jsondecode(response.body);
-                if (response.statuscode >= 400) {
-                    err(response.body.error);
+            this._firebase.remove(this._path, function (error, response) {
+                if (error) {
+                    err(error);
                 } else {
                     ok("Removed test data at \""+ this._path + "\"");
                 }

@@ -1,10 +1,9 @@
 // Copyright (c) 2015 Electric Imp
 // This file is licensed under the MIT License
 // http://opensource.org/licenses/MIT
-
 class Firebase {
     // Library version
-    static version = [1,1,1];
+    static version = [2,0,0];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -25,7 +24,7 @@ class Firebase {
     _data = null;               // Current snapshot of what we're streaming
     _callbacks = null;          // List of _callbacks for streaming request
     _keepAliveTimer = null;     // Wakeup timer that watches for a dead Firebase socket
-
+    _promiseIncluded = null ;   // indicate if Promise library is included
     /***************************************************************************
      * Constructor
      * Returns: FirebaseStream object
@@ -44,6 +43,8 @@ class Firebase {
         _data = {};
 
         _callbacks = {};
+
+        _promiseIncluded = ("Promise" in getroottable());
     }
 
     /***************************************************************************
@@ -158,20 +159,13 @@ class Firebase {
         }
         local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        request.sendasync(function(res) {
-            if (callback) {
-                local data = null;
-                try {
-                    data = http.jsondecode(res.body);
-                } catch (err) {
-                    _logError("Read: JSON Error: " + res.body);
-                    return;
-                }
-                callback(data);
-            } else if (res.statuscode != 200) {
-                _logError("Read: Firebase response: " + res.statuscode + " => " + res.body)
-            }
-        }.bindenv(this));
+        if (callback) {
+            _processResponse(request,callback);
+
+        } else {
+            return  _returnPromise(request);
+        }
+
     }
 
     /***************************************************************************
@@ -189,12 +183,12 @@ class Firebase {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
         local request = http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        request.sendasync(function(res) {
-            if (callback) callback(res);
-            else if (res.statuscode != 200) {
-                _logError("Push: Firebase responded " + res.statuscode + " to changes to " + path)
-            }
-        }.bindenv(this));
+        if (callback) {
+            _processResponse(request,callback);
+        } else {
+           return _returnPromise(request);
+        }
+
     }
 
     /***************************************************************************
@@ -212,12 +206,12 @@ class Firebase {
     function write(path, data, callback = null) {
         local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        request.sendasync(function(res) {
-            if (callback) callback(res);
-            else if (res.statuscode != 200) {
-                _logError("Write: Firebase responded " + res.statuscode + " to changes to " + path)
-            }
-        }.bindenv(this));
+        if (callback) {
+            _processResponse(request,callback);
+        } else {
+            return _returnPromise(request);
+        }
+
     }
 
     /***************************************************************************
@@ -236,12 +230,12 @@ class Firebase {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
         local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        request.sendasync(function(res) {
-            if (callback) callback(res);
-            else if (res.statuscode != 200) {
-                _logError("Update: Firebase responded " + res.statuscode + " to changes to " + path)
-            }
-        }.bindenv(this));
+        if (callback) {
+            _processResponse(request,callback);
+        } else {
+            return _returnPromise(request);
+        }
+
     }
 
     /***************************************************************************
@@ -257,13 +251,14 @@ class Firebase {
     function remove(path, callback = null) {
         local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        request.sendasync(function(res) {
-            if (callback) callback(res);
-            else if (res.statuscode != 200) {
-                _logError("Delete: Firebase responded " + res.statuscode + " to changes to " + path)
-            }
-        });
+        if (callback) {
+            _processResponse(request,callback);
+        } else {
+            return _returnPromise(request);
+        }
+
     }
+
 
     /************ Private Functions (DO NOT CALL FUNCTIONS BELOW) ************/
     // Builds a url to send a request to
@@ -294,10 +289,9 @@ class Firebase {
 
         // Use instance values if these keys aren't provided
         if(!("ns" in uriParams)) uriParams.ns <- _db;
-        if(!("auth" in uriParams) && _auth !=null) uriParams.auth <- _auth
+        if(!("auth" in uriParams) && _auth !=null) uriParams.auth <- _auth ;
 
-        url += "?" + http.urlencode(uriParams)
-
+        url += "?" + http.urlencode(uriParams);
         return url;
     }
 
@@ -389,11 +383,9 @@ class Firebase {
 
     // parses event messages
     function _parseEventMessage(text) {
-
         // split message into parts
         local alllines = split(text, "\n");
         if (alllines.len() < 2) return [];
-
         local returns = [];
         for (local i = 0; i < alllines.len(); ) {
             local lines = [];
@@ -573,6 +565,45 @@ class Firebase {
 
     function _logError(message) {
         if (_debug) server.error(message);
+    }
+
+    // return a Promise if the Promise library is included
+    function _returnPromise (request){
+        if (_promiseIncluded) {
+            return Promise(function (resolve,reject){
+                    request.sendasync(function(res){
+                        local data = null ;
+                        try {
+                            data = http.jsondecode(res.body);
+                            if ( 200 <= res.statuscode && res.statuscode < 300) {
+                                resolve(data);
+                            } else {
+                                reject(data.error);
+                            }
+                        } catch (err){
+                            reject (err);
+                        }
+                    }.bindenv(this));
+            });
+        }
+        return;
+    }
+
+    // process the http response accordingly
+    function _processResponse (request,callback) {
+        request.sendasync(function(res) {
+            local data = res.body ;
+            try {
+                data = http.jsondecode(data);
+                if (200 <= res.statuscode && res.statuscode < 300) {
+                    callback(null,data);
+                } else {
+                    callback(data.error,null);
+                }
+            } catch (err) {
+                callback(err,null);
+            }
+        }.bindenv(this))
     }
 
 }
