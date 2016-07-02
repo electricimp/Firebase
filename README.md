@@ -88,7 +88,7 @@ The *onErrorCallback* takes a single parameter: the [HTTP Response Table](https:
 // Setup onError handler
 function onStreamError(response) {
     server.error("Firebase encountered and error:");
-    server.error(respose.statuscode + " - " + response.body);
+    server.error(response.statuscode + " - " + response.body);
     imp.wakeup(1.0, openStream });
 }
 
