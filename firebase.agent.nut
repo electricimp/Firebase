@@ -347,7 +347,8 @@ class Firebase {
 
                         // Create local instance of message for the callback
                         local thisMessage = message;
-                        imp.wakeup(0, function() { callback(thisMessage.path, thisMessage.data); }.bindenv(this));
+						local thisCallback = callback;
+                        imp.wakeup(0, function() { thisCallback(thisMessage.path, thisMessage.data); }.bindenv(this));
                     } else if (message.event == "patch") {
                         // This is a patch for a (potentially) parent node
                         foreach (head,body in message.data) {
@@ -355,7 +356,8 @@ class Firebase {
                             if (newmessagepath == path) {
                                 // We have found a superbranch that matches, rewrite this as a PUT
                                 local subdata = _getDataFromPath(newmessagepath, message.path, _data);
-                                imp.wakeup(0, function() { callback(newmessagepath, subdata); }.bindenv(this));
+								local thisCallback = callback;
+                                imp.wakeup(0, function() { thisCallback(newmessagepath, subdata); }.bindenv(this));
                             }
                         }
                     } else if (message.path == "/" || path.find(message.path + "/") == 0) {
