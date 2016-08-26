@@ -3,7 +3,7 @@
 // http://opensource.org/licenses/MIT
 class Firebase {
     // Library version
-    static version = [2,0,0];
+    static version = [2,0,1];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -347,7 +347,7 @@ class Firebase {
 
                         // Create local instance of message for the callback
                         local thisMessage = message;
-						local thisCallback = callback;
+		local thisCallback = callback;
                         imp.wakeup(0, function() { thisCallback(thisMessage.path, thisMessage.data); }.bindenv(this));
                     } else if (message.event == "patch") {
                         // This is a patch for a (potentially) parent node
@@ -356,7 +356,7 @@ class Firebase {
                             if (newmessagepath == path) {
                                 // We have found a superbranch that matches, rewrite this as a PUT
                                 local subdata = _getDataFromPath(newmessagepath, message.path, _data);
-								local thisCallback = callback;
+		        local thisCallback = callback;
                                 imp.wakeup(0, function() { thisCallback(newmessagepath, subdata); }.bindenv(this));
                             }
                         }
@@ -366,7 +366,7 @@ class Firebase {
 
                         // Create local instance of path and callback
                         local thisPath = path;
-		local thisCallback = callback;
+	            local thisCallback = callback;
                         imp.wakeup(0, function() { thisCallback(thisPath, subdata); }.bindenv(this));
                     }
                 }
