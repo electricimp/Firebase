@@ -1,10 +1,10 @@
-# Firebase v2.0.0
+# Firebase v2.0.1
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 
-**To add this library to your project, add** `#require "Firebase.class.nut:2.0.0"` **to the top of your agent code.**
+**To add this library to your project, add** `#require "Firebase.class.nut:2.0.1"` **to the top of your agent code.**
 
-[![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=develop)](https://travis-ci.org/electricimp/JSONParser)
+[![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=master)](https://travis-ci.org/electricimp/JSONParser)
 
 ## Class Usage
 
@@ -40,7 +40,7 @@ firebase <- Firebase(FIREBASE_NAME, FIREBASE_AUTH_KEY);
 
 ### on(*path, callback*)
 
-Listens for changes at a particular location (*path*) or a node below *path*. When changes are detected, the callback method will be invoked. 
+Listens for changes at a particular location (*path*) or a node below *path*. When changes are detected, the callback method will be invoked.
 
 The callback method takes two parameters: *path* and *data*. The *path* parameter returns the full path of the node that was modified (this allows you to determine if the root of the path you’re tracking changed, or if a node below it changed).
 
@@ -157,10 +157,10 @@ fbDino.read("/dinosaurs", {"shallow": true}, function(error, data){
 
 // The \uf8ff character used in the query above is a very high code point in the Unicode range.
 // Because it is after most regular characters in Unicode, the query matches all values that start with a b.
-fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff"}, 
+fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff"},
     function(error,data){
         server.log(http.jsonencode(data));
-        //Logs { "bruhathkayosaurus": { "appeared": -70000000, "vanished": -70000000, 
+        //Logs { "bruhathkayosaurus": { "appeared": -70000000, "vanished": -70000000,
         //     "order": "saurischia", "length": 44, "weight": 135000, "height": 25 } }
 });
 ```
