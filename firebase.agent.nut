@@ -596,14 +596,20 @@ class Firebase {
         request.sendasync(function(res) {
             local data = res.body ;
             try {
-                data = http.jsondecode(data);
-                if (200 <= res.statuscode && res.statuscode < 300) {
-                    callback(null,data);
+                if (data == null || data == "") {
+                    data = null;
                 } else {
-                    callback(data.error,null);
+                    data = http.jsondecode(data);                    
+                }
+                if (200 <= res.statuscode && res.statuscode < 300) {
+                    callback(null, data);
+                } else if (typeof data == "table" && "error" in data) {
+                    callback(data.error, null);
+                } else {
+                    callback("Error " + res.statuscode, null);
                 }
             } catch (err) {
-                callback(err,null);
+                callback(err, null);
             }
         }.bindenv(this))
     }
