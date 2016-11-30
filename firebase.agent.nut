@@ -1,6 +1,9 @@
 // Copyright (c) 2015 Electric Imp
 // This file is licensed under the MIT License
 // http://opensource.org/licenses/MIT
+
+const FIREBASE_ERROR_TOO_MANY_REQUESTS = "Too many requests";
+
 class Firebase {
     // Library version
     static version = [2,0,1];
@@ -25,6 +28,7 @@ class Firebase {
     _callbacks = null;          // List of _callbacks for streaming request
     _keepAliveTimer = null;     // Wakeup timer that watches for a dead Firebase socket
     _promiseIncluded = null ;   // indicate if Promise library is included
+    _bufferedInput = null;      // Buffer used for reading streamed data
     /***************************************************************************
      * Constructor
      * Returns: FirebaseStream object
@@ -45,6 +49,8 @@ class Firebase {
         _callbacks = {};
 
         _promiseIncluded = ("Promise" in getroottable());
+
+        _bufferedInput = "";
     }
 
     /***************************************************************************
@@ -347,7 +353,7 @@ class Firebase {
 
                         // Create local instance of message for the callback
                         local thisMessage = message;
-		local thisCallback = callback;
+                        local thisCallback = callback;
                         imp.wakeup(0, function() { thisCallback(thisMessage.path, thisMessage.data); }.bindenv(this));
                     } else if (message.event == "patch") {
                         // This is a patch for a (potentially) parent node
@@ -356,7 +362,7 @@ class Firebase {
                             if (newmessagepath == path) {
                                 // We have found a superbranch that matches, rewrite this as a PUT
                                 local subdata = _getDataFromPath(newmessagepath, message.path, _data);
-		        local thisCallback = callback;
+                                local thisCallback = callback;
                                 imp.wakeup(0, function() { thisCallback(newmessagepath, subdata); }.bindenv(this));
                             }
                         }
@@ -366,7 +372,7 @@ class Firebase {
 
                         // Create local instance of path and callback
                         local thisPath = path;
-	            local thisCallback = callback;
+                        local thisCallback = callback;
                         imp.wakeup(0, function() { thisCallback(thisPath, subdata); }.bindenv(this));
                     }
                 }
@@ -384,7 +390,19 @@ class Firebase {
     }
 
     // parses event messages
-    function _parseEventMessage(text) {
+    function _parseEventMessage(input) {
+        // make sure we've read till the end of the "data" line
+        local text = _bufferedInput + input;
+        if (!text.find("}\n") && !text.find("null\n")) {
+            // TODO:
+            // Even though that's an indicator of the end of the "data" line, this might
+            // not be sufficient in some cases that we haven't got into yet. We'll need
+            // to implement a fair parser if we hit this issue again in the future.
+            _bufferedInput = text;
+            return [];
+        }
+        _bufferedInput = "";
+
         // split message into parts
         local alllines = split(text, "\n");
         if (alllines.len() < 2) return [];
@@ -594,16 +612,19 @@ class Firebase {
     // process the http response accordingly
     function _processResponse (request,callback) {
         request.sendasync(function(res) {
-            local data = res.body ;
+            local data = res.body;
             try {
-                data = http.jsondecode(data);
                 if (200 <= res.statuscode && res.statuscode < 300) {
-                    callback(null,data);
+                    data = http.jsondecode(data);
+                    callback(null, data);
+                } else if (res.statuscode == 429) {
+                    callback(FIREBASE_ERROR_TOO_MANY_REQUESTS, res);
                 } else {
-                    callback(data.error,null);
+                    data = http.jsondecode(data);
+                    callback(data.error, res);
                 }
             } catch (err) {
-                callback(err,null);
+                callback(err, null);
             }
         }.bindenv(this))
     }
