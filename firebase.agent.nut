@@ -6,7 +6,7 @@ const FIREBASE_ERROR_TOO_MANY_REQUESTS = "Too many requests";
 
 class Firebase {
     // Library version
-    static version = [2,0,1];
+    static version = [2,0,2];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
