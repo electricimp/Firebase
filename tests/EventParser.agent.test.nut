@@ -51,3 +51,4 @@ class EventParserTestCase extends ImpTestCase {
         assertEqual(218, events[1].data.data)
     }
 }
+
