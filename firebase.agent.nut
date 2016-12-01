@@ -616,8 +616,8 @@ class Firebase {
                     data = http.jsondecode(data);
                     callback(null, data);
                 } else {
-                    local error = data && data.len() > 0 ? http.jsondecode(data).error: null;
-                    callback(error, res);
+                    local err = data && data.len() > 0 ? http.jsondecode(data).error: null;
+                    callback(err, res);
                 }
             } catch (err) {
                 callback(err, null);
