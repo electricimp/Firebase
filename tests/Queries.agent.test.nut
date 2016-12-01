@@ -1,3 +1,6 @@
+// Copyright (c) 2015-2016 Electric Imp
+// This file is licensed under the MIT License
+// http://opensource.org/licenses/MIT
 
 const FIREBASE_AUTH_KEY = "#{env:FIREBASE_AUTH_KEY}";
 const FIREBASE_INSTANCE_NAME = "#{env:FIREBASE_INSTANCE_NAME}";
