@@ -2,8 +2,6 @@
 // This file is licensed under the MIT License
 // http://opensource.org/licenses/MIT
 
-const FIREBASE_ERROR_TOO_MANY_REQUESTS = "Too many requests";
-
 class Firebase {
     // Library version
     static version = [2,0,2];
@@ -617,11 +615,9 @@ class Firebase {
                 if (200 <= res.statuscode && res.statuscode < 300) {
                     data = http.jsondecode(data);
                     callback(null, data);
-                } else if (res.statuscode == 429) {
-                    callback(FIREBASE_ERROR_TOO_MANY_REQUESTS, res);
                 } else {
-                    data = http.jsondecode(data);
-                    callback(data.error, res);
+                    local error = data && data.len() > 0 ? http.jsondecode(data).error: null;
+                    callback(error, res);
                 }
             } catch (err) {
                 callback(err, null);
