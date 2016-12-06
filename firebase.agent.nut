@@ -612,11 +612,16 @@ class Firebase {
         request.sendasync(function(res) {
             local data = res.body;
             try {
+                if (data == "") {
+                  data = null;
+                }
+                if (data != null) {
+                    data = http.jsondecode(data);                    
+                }
                 if (200 <= res.statuscode && res.statuscode < 300) {
-                    data = http.jsondecode(data);
                     callback(null, data);
                 } else {
-                    local err = data && data.len() > 0 ? http.jsondecode(data).error: null;
+                    local err = data ? data.error: null;
                     callback(err, res);
                 }
             } catch (err) {
