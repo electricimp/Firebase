@@ -2,7 +2,7 @@
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 
-**To add this library to your project, add** `#require "Firebase.class.nut:2.0.1"` **to the top of your agent code.**
+**To add this library to your project, add** `#require "Firebase.class.nut:2.0.2"` **to the top of your agent code.**
 
 [![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=master)](https://travis-ci.org/electricimp/JSONParser)
 
