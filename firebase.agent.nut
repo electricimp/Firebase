@@ -620,14 +620,14 @@ class Firebase {
                 }
                 if (200 <= res.statuscode && res.statuscode < 300) {
                     callback(null, data);
+                } else if (typeof data == "table" && "error" in data) {
+                    callback(data.error, null);
                 } else {
-                    local err = data ? data.error: null;
-                    callback(err, res);
+                    callback("Error " + res.statuscode, null);
                 }
             } catch (err) {
                 callback(err, null);
             }
         }.bindenv(this))
     }
-
 }
