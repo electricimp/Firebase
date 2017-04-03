@@ -1,9 +1,30 @@
-// Copyright (c) 2015 Electric Imp
-// This file is licensed under the MIT License
-// http://opensource.org/licenses/MIT
+// MIT License
+//
+// Copyright 2015-2017 Electric Imp
+//
+// SPDX-License-Identifier: MIT
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+// EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+// OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+// ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+
 class Firebase {
     // Library version
-    static version = [2,0,1];
+    static version = [2,0,2];
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -24,7 +45,8 @@ class Firebase {
     _data = null;               // Current snapshot of what we're streaming
     _callbacks = null;          // List of _callbacks for streaming request
     _keepAliveTimer = null;     // Wakeup timer that watches for a dead Firebase socket
-    _promiseIncluded = null ;   // indicate if Promise library is included
+    _promiseIncluded = null;   // indicate if Promise library is included
+    _bufferedInput = null;    //  Buffer used for reading streamed data
     /***************************************************************************
      * Constructor
      * Returns: FirebaseStream object
@@ -39,6 +61,8 @@ class Firebase {
         _domain = domain;
         _baseUrl = "https://" + _db + "." + domain;
         _auth = auth;
+
+        _bufferedInput = "";
 
         _data = {};
 
@@ -159,13 +183,7 @@ class Firebase {
         }
         local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-
-        } else {
-            return  _returnPromise(request);
-        }
-
+        return _processResponse(request,callback);
     }
 
     /***************************************************************************
@@ -183,11 +201,7 @@ class Firebase {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
         local request = http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-           return _returnPromise(request);
-        }
+        return _processResponse(request,callback);
 
     }
 
@@ -206,12 +220,7 @@ class Firebase {
     function write(path, data, callback = null) {
         local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-            return _returnPromise(request);
-        }
-
+        return _processResponse(request,callback);
     }
 
     /***************************************************************************
@@ -230,11 +239,7 @@ class Firebase {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
         local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-            return _returnPromise(request);
-        }
+        return _processResponse(request,callback);
 
     }
 
@@ -251,12 +256,7 @@ class Firebase {
     function remove(path, callback = null) {
         local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-            return _returnPromise(request);
-        }
-
+        return _processResponse(request,callback);
     }
 
 
@@ -340,14 +340,14 @@ class Firebase {
                 _updateCache(message);
 
                 // Check out every callback for matching path
-                foreach (path,callback in _callbacks) {
+                foreach (path, callback in _callbacks) {
 
                     if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
                         // This is an exact match or a subbranch
 
                         // Create local instance of message for the callback
                         local thisMessage = message;
-		local thisCallback = callback;
+                        local thisCallback = callback;
                         imp.wakeup(0, function() { thisCallback(thisMessage.path, thisMessage.data); }.bindenv(this));
                     } else if (message.event == "patch") {
                         // This is a patch for a (potentially) parent node
@@ -356,7 +356,7 @@ class Firebase {
                             if (newmessagepath == path) {
                                 // We have found a superbranch that matches, rewrite this as a PUT
                                 local subdata = _getDataFromPath(newmessagepath, message.path, _data);
-		        local thisCallback = callback;
+                                local thisCallback = callback;
                                 imp.wakeup(0, function() { thisCallback(newmessagepath, subdata); }.bindenv(this));
                             }
                         }
@@ -366,7 +366,7 @@ class Firebase {
 
                         // Create local instance of path and callback
                         local thisPath = path;
-	            local thisCallback = callback;
+                        local thisCallback = callback;
                         imp.wakeup(0, function() { thisCallback(thisPath, subdata); }.bindenv(this));
                     }
                 }
@@ -383,8 +383,42 @@ class Firebase {
         }.bindenv(this);
     }
 
+    function _isValidJson(text) {
+        try {
+            http.jsondecode(text);
+        } catch (err) { 
+            return false; 
+        }
+        return true; 
+    }
+
     // parses event messages
-    function _parseEventMessage(text) {
+    function _parseEventMessage(input) {
+        local text = _bufferedInput + input;
+        local dataIndex = text.find("data");
+        local bracketIndex = text.find("{");
+
+        if (dataIndex && dataIndex < bracketIndex) {
+            if (!_isValidJson(text.slice(bracketIndex))) { 
+                _bufferedInput = text;
+                return []; 
+            }
+        } else {
+            if (bracketIndex == null && text.find("null")) {
+                _bufferedInput = text;   
+            } else { 
+                if (text.find("event") == null) { //find() can return 0
+                    _logError("Unexpected message:\n" + text); 
+                    _bufferedInput = "";   
+                } else {
+                    _bufferedInput = text;
+                }
+                return []; 
+            }
+        }
+
+         _bufferedInput = "";
+
         // split message into parts
         local alllines = split(text, "\n");
         if (alllines.len() < 2) return [];
@@ -394,7 +428,7 @@ class Firebase {
 
             lines.push(alllines[i++]);
             lines.push(alllines[i++]);
-            if (i < alllines.len() && alllines[i+1] == "}") {
+            if (i < alllines.len() && alllines[i + 1] == "}") {
                 lines.push(alllines[i++]);
             }
 
@@ -421,11 +455,12 @@ class Firebase {
                 d = http.jsondecode(dataString);
             } catch (e) {
                 _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
+                _bufferedInput = "";
                 throw e;
             }
 
             // return a useful object
-            returns.push({ "event": event, "path": d.path, "data": d.data });
+            returns.push({ "event": event, "path": d ? d.path : null, "data": d ? d.data : null });
         }
 
         return returns;
@@ -570,7 +605,7 @@ class Firebase {
     }
 
     // return a Promise if the Promise library is included
-    function _returnPromise (request){
+    function _returnPromise(request){
         if (_promiseIncluded) {
             return Promise(function (resolve,reject){
                     request.sendasync(function(res){
@@ -592,20 +627,34 @@ class Firebase {
     }
 
     // process the http response accordingly
-    function _processResponse (request,callback) {
+    function _useCallback(request, callback) {
         request.sendasync(function(res) {
-            local data = res.body ;
+            local data = res.body;
             try {
-                data = http.jsondecode(data);
+                if (data == "") {
+                    data = null; 
+                }
+                if (data != null) {
+                    data = http.jsondecode(data);    
+                }
                 if (200 <= res.statuscode && res.statuscode < 300) {
-                    callback(null,data);
+                    callback && callback(null, data);
                 } else {
-                    callback(data.error,null);
+                    callback && callback(data.error, null);
                 }
             } catch (err) {
-                callback(err,null);
+                callback && callback("Error " + res.statuscode, null);
             }
         }.bindenv(this))
     }
 
+    function _processResponse(request, callback) {
+        if (_promiseIncluded && callback == null) {
+            return _returnPromise(request);
+        } else { 
+            return _useCallback(request, callback);
+        }
+    }
+
 }
+

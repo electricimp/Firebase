@@ -1,4 +1,4 @@
-# Firebase v2.0.1
+# Firebase v2.0.2
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 
