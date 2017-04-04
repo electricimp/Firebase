@@ -24,7 +24,7 @@
 
 class Firebase {
     // Library version
-    static version = [2,0,2];
+    static VERSION = "2.0.2";
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -417,7 +417,7 @@ class Firebase {
             }
         }
 
-         _bufferedInput = "";
+        _bufferedInput = "";
 
         // split message into parts
         local alllines = split(text, "\n");
@@ -460,7 +460,9 @@ class Firebase {
             }
 
             // return a useful object
-            returns.push({ "event": event, "path": d ? d.path : null, "data": d ? d.data : null });
+            local path = d ? d.path : null;
+            local data = d ? d.data : null;
+            returns.push({"event": event, "path": path, "data": data});
         }
 
         return returns;
@@ -605,7 +607,7 @@ class Firebase {
     }
 
     // return a Promise if the Promise library is included
-    function _returnPromise(request){
+    function _returnPromise(request) {
         if (_promiseIncluded) {
             return Promise(function (resolve,reject){
                     request.sendasync(function(res){
@@ -627,7 +629,7 @@ class Firebase {
     }
 
     // process the http response accordingly
-    function _useCallback(request, callback) {
+    function _invokeCallback(request, callback) {
         request.sendasync(function(res) {
             local data = res.body;
             try {
@@ -652,7 +654,7 @@ class Firebase {
         if (_promiseIncluded && callback == null) {
             return _returnPromise(request);
         } else { 
-            return _useCallback(request, callback);
+            return _invokeCallback(request, callback);
         }
     }
 
