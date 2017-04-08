@@ -392,11 +392,35 @@ class Firebase {
         return true; 
     }
 
+    function _isEventStreamMessage(text, eventIndex) { 
+        local event = "event"; 
+        local i = 0;
+        while (eventIndex + i < text.len() && i < event.len()) {
+            if (text[eventIndex + i] != event[i]) { 
+                return false; 
+            } 
+            i++;
+        } 
+        return true; 
+    }   
+
     // parses event messages
     //https://www.w3.org/TR/eventsource/#parsing-an-event-stream
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
         //find data field and "{" character (start of data Json)
+        local eventIndex = text.find("e");
+
+        local isEvent = false;
+        if (eventIndex != null) { 
+            isEvent = _isEventStreamMessage(text, eventIndex);
+        }
+        if (!isEvent) {
+            _logError("Unexpected message:\n" + text); 
+            _bufferedInput = "";  
+            return; 
+        }
+
         local dataIndex = text.find("data");
         local bracketIndex = text.find("{");
 
@@ -409,18 +433,12 @@ class Firebase {
                 return []; 
             }
         } else {
-            //check, do we really get event-stream message
-            if (text.find("event") == null) { //find() can return 0
-                    _logError("Unexpected message:\n" + text); 
-                    _bufferedInput = "";   
-            } else {
-                //check, do we have null in data field
-                //in "yes" case, we can parse our message 
-                //in "no" case, we probably didn't recieve full message
-                if (!(bracketIndex == null && text.find("null"))) {
-                    _bufferedInput = text;
-                    return []; 
-                }
+            //check, do we have null in data field
+            //in  "yes" case, we can parse our message 
+            //in "no" case, we probably didn't recieve full message
+            if (!(bracketIndex == null && text.find("null"))) {
+                _bufferedInput = text;
+                return []; 
             }
         }
 
@@ -666,4 +684,7 @@ class Firebase {
     }
 
 }
+
+
+
 
