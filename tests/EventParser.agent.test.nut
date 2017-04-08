@@ -73,4 +73,10 @@ class EventParserTestCase extends ImpTestCase {
         assertEqual(217, events[0].data.data)
     }
 
+    function test06_parseEvent() { 
+         local events = _firebase._parseEventMessage("ev")
+        assertEqual(0, events.len())
+        events = _firebase._parseEventMessage("ent: put\ndata: null \n")
+        assertEqual(1, events.len())
+    }
 }
