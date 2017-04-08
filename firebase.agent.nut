@@ -393,27 +393,34 @@ class Firebase {
     }
 
     // parses event messages
+    //https://www.w3.org/TR/eventsource/#parsing-an-event-stream
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
+        //find data field and "{" character (start of data Json)
         local dataIndex = text.find("data");
         local bracketIndex = text.find("{");
 
-        if (dataIndex && dataIndex < bracketIndex) {
+        //check, do we have "data" field.
+        //prevent situation, when word "data" only placed inside json
+        if (dataIndex && dataIndex < bracketIndex) { 
+            //try to read json from bracket
             if (!_isValidJson(text.slice(bracketIndex))) { 
                 _bufferedInput = text;
                 return []; 
             }
         } else {
-            if (bracketIndex == null && text.find("null")) {
-                _bufferedInput = text;   
-            } else { 
-                if (text.find("event") == null) { //find() can return 0
+            //check, do we really get event-stream message
+            if (text.find("event") == null) { //find() can return 0
                     _logError("Unexpected message:\n" + text); 
                     _bufferedInput = "";   
-                } else {
+            } else {
+                //check, do we have null in data field
+                //in "yes" case, we can parse our message 
+                //in "no" case, we probably didn't recieve full message
+                if (!(bracketIndex == null && text.find("null"))) {
                     _bufferedInput = text;
+                    return []; 
                 }
-                return []; 
             }
         }
 
