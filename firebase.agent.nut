@@ -383,85 +383,43 @@ class Firebase {
         }.bindenv(this);
     }
 
-    function _isValidJson(text) {
-        try {
-            http.jsondecode(text);
-        } catch (err) { 
-            return false; 
-        }
-        return true; 
-    }
-
-    function _isEventStreamMessage(text, eventIndex) { 
-        local event = "event"; 
-        local i = 0;
-        while (eventIndex + i < text.len() && i < event.len()) {
-            if (text[eventIndex + i] != event[i]) { 
-                return false; 
-            } 
-            i++;
-        } 
-        return true; 
-    }   
-
     // parses event messages
-    //https://www.w3.org/TR/eventsource/#parsing-an-event-stream
+    // (https://www.w3.org/TR/eventsource/#parsing-an-event-stream)
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
-        //find data field and "{" character (start of data Json)
-        local eventIndex = text.find("e");
-
-        local isEvent = false;
-        if (eventIndex != null) { 
-            isEvent = _isEventStreamMessage(text, eventIndex);
-        }
-        if (!isEvent) {
-            _logError("Unexpected message:\n" + text); 
-            _bufferedInput = "";  
-            return; 
-        }
-
-        local dataIndex = text.find("data");
-        local bracketIndex = text.find("{");
-
-        //check, do we have "data" field.
-        //prevent situation, when word "data" only placed inside json
-        if (dataIndex && dataIndex < bracketIndex) { 
-            //try to read json from bracket
-            if (!_isValidJson(text.slice(bracketIndex))) { 
-                _bufferedInput = text;
-                return []; 
-            }
-        } else {
-            //check, do we have null in data field
-            //in  "yes" case, we can parse our message 
-            //in "no" case, we probably didn't recieve full message
-            if (!(bracketIndex == null && text.find("null"))) {
-                _bufferedInput = text;
-                return []; 
-            }
-        }
-
         _bufferedInput = "";
 
         // split message into parts
-        local alllines = split(text, "\n");
-        if (alllines.len() < 2) return [];
-        local returns = [];
-        for (local i = 0; i < alllines.len(); ) {
-            local lines = [];
+        local allLines = split(text, "\n");
 
-            lines.push(alllines[i++]);
-            lines.push(alllines[i++]);
-            if (i < alllines.len() && alllines[i + 1] == "}") {
-                lines.push(alllines[i++]);
+        if (allLines.len() < 2) {
+            _bufferedInput = text;
+            return [];
+        }
+
+        local parsedEvents = [];
+
+        for (local i = 0; i < allLines.len(); ) {
+            local lines = [];
+            if (i + 1 < allLines.len()) {
+                lines.push(allLines[i++]);
+                lines.push(allLines[i++]);
+            } else {
+                if (i + 1 < allLines.len()) {
+                    _bufferedInput = lines[i + 1] + "\n";
+                }
+                return []; 
+            }
+
+            if (i < allLines.len() && allLines[i] == "}") {
+                lines.push(allLines[i++]);
             }
 
             // Check for error conditions
             if (lines.len() == 3 && lines[0] == "{" && lines[2] == "}") {
                 local error = http.jsondecode(text);
                 _logError("Firebase error message: " + error.error);
-                continue;   //The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
+                continue;   // The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
             }
 
             // get the event
@@ -479,18 +437,29 @@ class Firebase {
             try {
                 d = http.jsondecode(dataString);
             } catch (e) {
-                _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
-                _bufferedInput = "";
-                throw e;
+                if (i + 1 < allLines.len()) {
+                    _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
+                    _bufferedInput = "";
+                    continue; 
+                } else {
+                    for (local j = 0; j < lines.len(); j++) {
+                        if (j + 1 != lines.len()) { 
+                            _bufferedInput = _bufferedInput + lines[j] + "\n";
+                        } else {
+                            _bufferedInput = _bufferedInput + lines[j]; 
+                        }
+                    }
+                    return []; 
+                }
             }
 
             // return a useful object
             local path = d ? d.path : null;
             local data = d ? d.data : null;
-            returns.push({"event": event, "path": path, "data": data});
+            parsedEvents.push({"event": event, "path": path, "data": data});
         }
 
-        return returns;
+        return parsedEvents;
     }
 
     // Updates the local cache
@@ -682,9 +651,4 @@ class Firebase {
             return _invokeCallback(request, callback);
         }
     }
-
 }
-
-
-
-
