@@ -385,6 +385,11 @@ class Firebase {
 
     // parses event messages
     // (https://www.w3.org/TR/eventsource/#parsing-an-event-stream)
+    // Message example:
+    // event: put
+    // data: {"path": "/c", "data": {"foo": true, "bar": false}}
+    // All messages except errors have two lines
+    // function can parse several messages, not full message or both
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
         _bufferedInput = "";
@@ -392,6 +397,7 @@ class Firebase {
         // split message into parts
         local allLines = split(text, "\n");
 
+        // Check, if we have at least one message
         if (allLines.len() < 2) {
             _bufferedInput = text;
             return [];
@@ -401,16 +407,19 @@ class Firebase {
 
         for (local i = 0; i < allLines.len(); ) {
             local lines = [];
+            //try to get 2 lines
             if (i + 1 < allLines.len()) {
                 lines.push(allLines[i++]);
                 lines.push(allLines[i++]);
             } else {
-                if (i + 1 < allLines.len()) {
-                    _bufferedInput = lines[i + 1] + "\n";
+                // check, if we have at least one line, that we should to save
+                if (i < allLines.len()) {
+                    _bufferedInput = lines[i] + "\n";
                 }
-                return []; 
+                return parsedEvents; 
             }
 
+            // Error have 3 lines and last one is "}"
             if (i < allLines.len() && allLines[i] == "}") {
                 lines.push(allLines[i++]);
             }
@@ -426,6 +435,7 @@ class Firebase {
             local eventLine = lines[0];
             local event = eventLine.slice(7);
 
+            // keep-alive contains no data
             if(event.tolower() == "keep-alive") continue;
 
             // get the data
@@ -435,13 +445,17 @@ class Firebase {
             // pull interesting bits out of the data
             local d;
             try {
+                // try to encode json to get data and path fields
                 d = http.jsondecode(dataString);
             } catch (e) {
+                // Check, if it is last line and we want to wait another part, or
+                // message is broken
                 if (i + 1 < allLines.len()) {
                     _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
                     _bufferedInput = "";
                     continue; 
                 } else {
+                    // add last not full message to buffer
                     for (local j = 0; j < lines.len(); j++) {
                         if (j + 1 != lines.len()) { 
                             _bufferedInput = _bufferedInput + lines[j] + "\n";
@@ -449,7 +463,7 @@ class Firebase {
                             _bufferedInput = _bufferedInput + lines[j]; 
                         }
                     }
-                    return []; 
+                    return parsedEvents; 
                 }
             }
 
