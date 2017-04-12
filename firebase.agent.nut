@@ -393,7 +393,7 @@ class Firebase {
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
         _bufferedInput = "";
-
+        server.log(text);
         // split message into parts
         local allLines = split(text, "\n");
 
@@ -414,7 +414,8 @@ class Firebase {
             } else {
                 // check, if we have at least one line, that we should to save
                 if (i < allLines.len()) {
-                    _bufferedInput = lines[i] + "\n";
+                    isEndLine = text[text.len() - 1] == "\n";
+                    _bufferedInput = lines[i] + (isEndLine ? "\n" : "");
                 }
                 return parsedEvents; 
             }
@@ -422,12 +423,12 @@ class Firebase {
             // Error have 3 lines and last one is "}"
             if (i < allLines.len() && allLines[i] == "}") {
                 lines.push(allLines[i++]);
-            }
-
-            // Check for error conditions
-            if (lines.len() == 3 && lines[0] == "{" && lines[2] == "}") {
-                local error = http.jsondecode(text);
-                _logError("Firebase error message: " + error.error);
+                try {
+                    local error = http.jsondecode(text);
+                    _logError("Firebase error message: " + error.error);
+                } catch (e) { 
+                    _logError("Exeption while parsing error message: " + e);
+                }
                 continue;   // The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
             }
 
@@ -436,14 +437,14 @@ class Firebase {
             local event = eventLine.slice(7);
 
             // keep-alive contains no data
-            if(event.tolower() == "keep-alive") continue;
+            if (event.tolower() == "keep-alive") continue;
 
             // get the data
             local dataLine = lines[1];
             local dataString = dataLine.slice(6);
 
             // pull interesting bits out of the data
-            local d;
+            local d = null;
             try {
                 // try to encode json to get data and path fields
                 d = http.jsondecode(dataString);
@@ -451,17 +452,15 @@ class Firebase {
                 // Check, if it is last line and we want to wait another part, or
                 // message is broken
                 if (i + 1 < allLines.len()) {
-                    _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
+                    _logError("Exception while decoding (" + dataString.len() + ") bytes): " + dataString);
                     _bufferedInput = "";
                     continue; 
                 } else {
                     // add last not full message to buffer
+                    local isEndLine = text[text.len() - 1] == "\n";
                     for (local j = 0; j < lines.len(); j++) {
-                        if (j + 1 != lines.len()) { 
-                            _bufferedInput = _bufferedInput + lines[j] + "\n";
-                        } else {
-                            _bufferedInput = _bufferedInput + lines[j]; 
-                        }
+                        local isLastString = j == lines.len() - 1;
+                        _bufferedInput += lines[j] + (!isLastString || isEndLine ? "\n" : "");
                     }
                     return parsedEvents; 
                 }
