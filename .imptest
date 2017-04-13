@@ -1,7 +1,7 @@
 {
-    "modelId": "UKD1oEgm7twF" /* Vimp.4 */,
+    "modelId": "qryDFGlK1tUd" /* B */,
     "devices": [
-        "4353450000000004" /* EI.Test.Vimp.4 @ Firebase lib */
+        "237d606938a609ee" /* G */
     ],
     "agentFile": "firebase.agent.nut",
     "deviceFile": false,

@@ -417,7 +417,7 @@ class Firebase {
                     isEndLine = text[text.len() - 1] == "\n";
                     _bufferedInput = lines[i] + (isEndLine ? "\n" : "");
                 }
-                return parsedEvents; 
+                return parsedEvents;
             }
 
             // Error have 3 lines and last one is "}"
@@ -426,7 +426,7 @@ class Firebase {
                 try {
                     local error = http.jsondecode(text);
                     _logError("Firebase error message: " + error.error);
-                } catch (e) { 
+                } catch (e) {
                     _logError("Exeption while parsing error message: " + e);
                 }
                 continue;   // The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
@@ -454,7 +454,7 @@ class Firebase {
                 if (i + 1 < allLines.len()) {
                     _logError("Exception while decoding (" + dataString.len() + ") bytes): " + dataString);
                     _bufferedInput = "";
-                    continue; 
+                    continue;
                 } else {
                     // add last not full message to buffer
                     local isEndLine = text[text.len() - 1] == "\n";
@@ -462,7 +462,7 @@ class Firebase {
                         local isLastString = j == lines.len() - 1;
                         _bufferedInput += lines[j] + (!isLastString || isEndLine ? "\n" : "");
                     }
-                    return parsedEvents; 
+                    return parsedEvents;
                 }
             }
 
@@ -641,10 +641,10 @@ class Firebase {
             local data = res.body;
             try {
                 if (data == "") {
-                    data = null; 
+                    data = null;
                 }
                 if (data != null) {
-                    data = http.jsondecode(data);    
+                    data = http.jsondecode(data);
                 }
                 if (200 <= res.statuscode && res.statuscode < 300) {
                     callback && callback(null, data);
@@ -660,7 +660,7 @@ class Firebase {
     function _processResponse(request, callback) {
         if (_promiseIncluded && callback == null) {
             return _returnPromise(request);
-        } else { 
+        } else {
             return _invokeCallback(request, callback);
         }
     }

@@ -34,56 +34,74 @@ class EventParserTestCase extends ImpTestCase {
     }
 
     function test01_parseEvent() {
-        local events = _firebase._parseEventMessage("event: put\ndata: ")
-        assertEqual(0, events.len())
-        events = _firebase._parseEventMessage("{\"path\":\"/\",\"data\":{\"data\":214}}\n")
-        assertEqual(1, events.len())
-        assertEqual(214, events[0].data.data)
+        local events = _firebase._parseEventMessage("event: put\ndata: ");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("{\"path\":\"/\",\"data\":{\"data\":214}}\n");
+        assertEqual(1, events.len());
+        assertEqual(214, events[0].data.data);
+        _firebase._bufferedInput = "";
     }
 
 
     function test02_parseEvent() {
-        local events = _firebase._parseEventMessage("event: put")
-        assertEqual(0, events.len())
-        events = _firebase._parseEventMessage("\ndata: {\"path\":\"/\",\"data\":{\"data\":215}}\n")
-        assertEqual(1, events.len())
-        assertEqual(215, events[0].data.data)
+        local events = _firebase._parseEventMessage("event: put");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("\ndata: {\"path\":\"/\",\"data\":{\"data\":215}}\n");
+        assertEqual(1, events.len());
+        assertEqual(215, events[0].data.data);
+        _firebase._bufferedInput = "";
     }
 
     function test03_parseEvent() {
-        local events = _firebase._parseEventMessage("event: put")
-        assertEqual(0, events.len())
-        events = _firebase._parseEventMessage("\ndata: {\"path\":\"/\",")
-        assertEqual(0, events.len())
-        events = _firebase._parseEventMessage("\"data\":{\"data\":216}}\n\n\n")
-        assertEqual(1, events.len())
-        assertEqual(216, events[0].data.data)
+        local events = _firebase._parseEventMessage("event: put");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("\ndata: {\"path\":\"/\",");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("\"data\":{\"data\":216}}\n\n\n");
+        assertEqual(1, events.len());
+        assertEqual(216, events[0].data.data);
+        _firebase._bufferedInput = "";
     }
 
-    function test04_parseEvent() { 
-        local events = _firebase._parseEventMessage("event: put")
-        assertEqual(0, events.len())
-        events = _firebase._parseEventMessage("\ndata: null \n")
-        assertEqual(1, events.len())
+    function test031_parseEvent() {
+        local events = _firebase._parseEventMessage("event: put");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("\ndata: {\"path\":\"/\",");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("\"data\":{\"data\":216}}}");
+        assertEqual(0, events.len());
+        assertEqual(216, events[0].data.data);
+        _firebase._bufferedInput = "";
+    }
+
+    function test04_parseEvent() {
+        local events = _firebase._parseEventMessage("event: put");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("\ndata: null \n");
+        assertEqual(1, events.len());
+        _firebase._bufferedInput = "";
     }
 
      function test05_parseEvent() {
-        local events = _firebase._parseEventMessage("event: put \ndata: {\"path\":\"/\",\"data\":{\"data\":217}}\n")
-        assertEqual(1, events.len())
-        assertEqual(217, events[0].data.data)
+        local events = _firebase._parseEventMessage("event: put \ndata: {\"path\":\"/\",\"data\":{\"data\":217}}\n");
+        assertEqual(1, events.len());
+        assertEqual(217, events[0].data.data);
+        _firebase._bufferedInput = "";
     }
 
-    function test06_parseEvent() { 
-         local events = _firebase._parseEventMessage("ev")
-        assertEqual(0, events.len())
-        events = _firebase._parseEventMessage("ent: put\ndata: null \n")
+    function test06_parseEvent() {
+         local events = _firebase._parseEventMessage("ev");
+        assertEqual(0, events.len());
+        events = _firebase._parseEventMessage("ent: put\ndata: null \n");
         assertEqual(1, events.len())
+        _firebase._bufferedInput = "";
     }
 
      function test07_parseEvent() {
-        local events = _firebase._parseEventMessage("event: put \ndata: {\"path\":\"/\",\"data\":{\"data\":219}}\nevent: put \ndata: {\"path\":\"/\",\"data\":{\"data\":220}}\n")
-        assertEqual(2, events.len())
-        assertEqual(219, events[0].data.data)
-        assertEqual(220, events[1].data.data)
+        local events = _firebase._parseEventMessage("event: put \ndata: {\"path\":\"/\",\"data\":{\"data\":219}}\nevent: put \ndata: {\"path\":\"/\",\"data\":{\"data\":220}}\n");
+        assertEqual(2, events.len());
+        assertEqual(219, events[0].data.data);
+        assertEqual(220, events[1].data.data);
+        _firebase._bufferedInput = "";
     }
 }
