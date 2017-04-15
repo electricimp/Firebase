@@ -393,7 +393,6 @@ class Firebase {
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
         _bufferedInput = "";
-        server.log(text);
         // split message into parts
         local allLines = split(text, "\n");
 
@@ -452,7 +451,7 @@ class Firebase {
                 // Check, if it is last line and we want to wait another part, or
                 // message is broken
                 if (i + 1 < allLines.len()) {
-                    _logError("Exception while decoding (" + dataString.len() + ") bytes): " + dataString);
+                    _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
                     _bufferedInput = "";
                     continue;
                 } else {
