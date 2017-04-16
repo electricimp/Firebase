@@ -3,7 +3,7 @@
     "devices": [
         "237d606938a609ee" /* G */
     ],
-    "agentFile": "firebase.agent.nut",
+    "agentFile": "Firebase.agent.lib.nut",
     "deviceFile": false,
     "stopOnFailure": false,
     "timeout": 10,
