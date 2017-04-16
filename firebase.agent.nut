@@ -393,6 +393,7 @@ class Firebase {
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
         _bufferedInput = "";
+        
         // split message into parts
         local allLines = split(text, "\n");
 
@@ -413,8 +414,8 @@ class Firebase {
             } else {
                 // check, if we have at least one line, that we should to save
                 if (i < allLines.len()) {
-                    isEndLine = text[text.len() - 1] == "\n";
-                    _bufferedInput = lines[i] + (isEndLine ? "\n" : "");
+                    hasEndOfLine = text[text.len() - 1] == "\n";
+                    _bufferedInput = lines[i] + (hasEndOfLine ? "\n" : "");
                 }
                 return parsedEvents;
             }
@@ -456,10 +457,10 @@ class Firebase {
                     continue;
                 } else {
                     // add last not full message to buffer
-                    local isEndLine = text[text.len() - 1] == "\n";
+                    local hasEndOfLine = text[text.len() - 1] == "\n";
                     for (local j = 0; j < lines.len(); j++) {
                         local isLastString = j == lines.len() - 1;
-                        _bufferedInput += lines[j] + (!isLastString || isEndLine ? "\n" : "");
+                        _bufferedInput += lines[j] + (!isLastString || hasEndOfLine ? "\n" : "");
                     }
                     return parsedEvents;
                 }
