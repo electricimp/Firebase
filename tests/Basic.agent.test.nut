@@ -77,6 +77,31 @@ class BasicTestCase extends ImpTestCase {
         }.bindenv(this))
     }
 
+    function test03_promiseWrite() {
+        this._luckyNum = this._luckyNum + 1; 
+        this._firebase.write(this._path, this._luckyNum )
+        .then(function (data) {
+                  this.assertEqual(this._luckyNum, response);
+              }, 
+              function (err) { 
+                  this.assert(err);
+              }
+        );
+                
+    }
+
+    function test04_promiseRead() {
+        this._firebase.write(this._path, this._luckyNum)
+        .then(function (data) {
+                  this.assertEqual(this._luckyNum, data);
+              }, 
+              function (err) { 
+                  this.assert(err);
+              }
+        );
+                
+    }
+
     /**
      * Deletes test data
      */

@@ -613,55 +613,50 @@ class Firebase {
         if (_debug) server.error(message);
     }
 
-    // return a Promise if the Promise library is included
-    function _returnPromise(request) {
-        if (_promiseIncluded) {
-            return Promise(function (resolve,reject){
-                    request.sendasync(function(res){
-                        local data = null ;
-                        try {
-                            data = http.jsondecode(res.body);
-                            if ( 200 <= res.statuscode && res.statuscode < 300) {
-                                resolve(data);
-                            } else {
-                                reject(data.error);
-                            }
-                        } catch (err){
-                            reject (err);
-                        }
-                    }.bindenv(this));
-            });
-        }
-        return;
+    // return a Promise 
+    function _createRequestPromise(request) {
+        return Promise(function (resolve, reject) {
+            request.sendasync(_createResponseHandler(resolve, reject));
+        });
     }
 
     // process the http response accordingly
-    function _invokeCallback(request, callback) {
-        request.sendasync(function(res) {
-            local data = res.body;
-            try {
-                if (data == "") {
-                    data = null;
-                }
-                if (data != null) {
-                    data = http.jsondecode(data);
-                }
-                if (200 <= res.statuscode && res.statuscode < 300) {
-                    callback && callback(null, data);
-                } else {
-                    callback && callback(data.error, null);
-                }
-            } catch (err) {
-                callback && callback("Error " + res.statuscode, null);
-            }
-        }.bindenv(this))
+    function _sendRequest(request, callback) {
+        local resolve = function (data) { 
+            callback && callback(null, data);
+        }; 
+        local reject = function (err) { 
+            callback && callback(err, null);
+        }; 
+        request.sendasync(_createResponseHandler(reject, resolve));
     }
 
+    function _createResponseHandler(reject, resolve) { 
+        return function (res) { 
+            local response = res.body;
+            try {
+                local data = null;
+                if (response && response.len() > 0) {
+                    data = http.jsondecode(response);
+                }
+                if (200 <= res.statuscode && res.statuscode < 300) {
+                    resolve(data); 
+                } else {
+                    local error = data ? data.error : null; 
+                    reject(error); 
+                }
+            } catch (err) {
+                reject("Error " + res.statuscode);
+            }
+        }
+    }
+
+    // use Promise if promise libary included and callback != null
     function _processResponse(request, callback) {
         if (_promiseIncluded && callback == null) {
-            return _returnPromise(request);
+            return _createRequestPromise(request);
         } else {
-            return _invokeCallback(request, callback);
+            return _sendRequest(request, callback);
         }
     }
 }
