@@ -628,10 +628,10 @@ class Firebase {
         local reject = function (err) { 
             callback && callback(err, null);
         }; 
-        request.sendasync(_createResponseHandler(reject, resolve));
+        request.sendasync(_createResponseHandler(resolve, reject));
     }
 
-    function _createResponseHandler(reject, resolve) { 
+    function _createResponseHandler(resolve, reject) { 
         return function (res) { 
             local response = res.body;
             try {
