@@ -31,7 +31,9 @@ class NoPromiseTestCase extends ImpTestCase {
     _luckyNum = null;
 
     function setUp() {
-        delete getroottable().Promise; 
+        if (getroottable().Promise != null) {
+            delete getroottable().Promise; 
+        }
         this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
         this._path = this.session + "-basic";
         this._luckyNum = math.rand() + "" + math.rand();

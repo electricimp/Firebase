@@ -617,21 +617,21 @@ class Firebase {
     function _createRequestPromise(request) {
         return Promise(function (resolve, reject) {
             request.sendasync(_createResponseHandler(resolve, reject));
-        });
+        }.bindenv(this));
     }
 
     // process the http response accordingly
     function _sendRequest(request, callback) {
-        local resolve = function (data) { 
+        local onSuccess = function (data) { 
             callback && callback(null, data);
         }; 
-        local reject = function (err) { 
+        local onError = function (err) { 
             callback && callback(err, null);
         }; 
-        request.sendasync(_createResponseHandler(resolve, reject));
+        request.sendasync(_createResponseHandler(onSuccess, onError));
     }
 
-    function _createResponseHandler(resolve, reject) { 
+    function _createResponseHandler(onSuccess, onError) { 
         return function (res) { 
             local response = res.body;
             try {
@@ -640,13 +640,13 @@ class Firebase {
                     data = http.jsondecode(response);
                 }
                 if (200 <= res.statuscode && res.statuscode < 300) {
-                    resolve(data); 
+                    onSuccess(data); 
                 } else {
                     local error = data ? data.error : null; 
-                    reject(error); 
+                    onError(error); 
                 }
             } catch (err) {
-                reject("Error " + res.statuscode);
+                onError("Error " + res.statuscode);
             }
         }
     }
