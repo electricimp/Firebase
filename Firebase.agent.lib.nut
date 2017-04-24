@@ -393,7 +393,7 @@ class Firebase {
     function _parseEventMessage(input) {
         local text = _bufferedInput + input;
         _bufferedInput = "";
-        
+
         // split message into parts
         local allLines = split(text, "\n");
 
@@ -613,7 +613,7 @@ class Firebase {
         if (_debug) server.error(message);
     }
 
-    // return a Promise 
+    // return a Promise
     function _createRequestPromise(request) {
         return Promise(function (resolve, reject) {
             request.sendasync(_createResponseHandler(resolve, reject));
@@ -622,17 +622,17 @@ class Firebase {
 
     // process the http response accordingly
     function _sendRequest(request, callback) {
-        local onSuccess = function (data) { 
+        local onSuccess = function (data) {
             callback && callback(null, data);
-        }; 
-        local onError = function (err) { 
+        };
+        local onError = function (err) {
             callback && callback(err, null);
-        }; 
+        };
         request.sendasync(_createResponseHandler(onSuccess, onError));
     }
 
-    function _createResponseHandler(onSuccess, onError) { 
-        return function (res) { 
+    function _createResponseHandler(onSuccess, onError) {
+        return function (res) {
             local response = res.body;
             try {
                 local data = null;
@@ -640,13 +640,15 @@ class Firebase {
                     data = http.jsondecode(response);
                 }
                 if (200 <= res.statuscode && res.statuscode < 300) {
-                    onSuccess(data); 
+                    onSuccess(data);
+                } else if (typeof data == "table" && "error" in data) {
+                    local error = data ? data.error : null;
+                    onError(error);
                 } else {
-                    local error = data ? data.error : null; 
-                    onError(error); 
+                    onError("Error " + res.statuscode);
                 }
             } catch (err) {
-                onError("Error " + res.statuscode);
+                onError(err);
             }
         }
     }
