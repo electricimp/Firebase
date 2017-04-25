@@ -35,40 +35,46 @@ class NoPromiseTestCase extends ImpTestCase {
             delete getroottable().Promise; 
         }
         this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-basic";
+        this._path = this.session + "-nopromise";
         this._luckyNum = math.rand() + "" + math.rand();
         return "Firebase instance \"" + FIREBASE_INSTANCE_NAME + "\" created";
     }
 
     /**
      * Write test data, but no callback and no promise used
+     * We don't know, when write will be ready, and we just wait.
+     * We also wait before remove in tearDown(); 
      */
     function test01_write() { 
         this._firebase.write(this._path, this._luckyNum);
-        this._firebase.read(this._path, function (error, data) {
-            if (error) {
-                err(error);
-            } else {
-                try {
-                    this.assertEqual(this._luckyNum, data);
-                    ok("Read test data at \""+ this._path + "\"");
-                } catch (e) {
-                    err(e);
+        imp.wakeup(1, function() {
+            this._firebase.read(this._path, function (error, data) {
+                if (error) {
+                    server.error(error);
+                } else {
+                    try {
+                        this.assertEqual(this._luckyNum, data);
+                        server.log("Read test data at \""+ this._path + "\"");
+                    } catch (e) {
+                        server.error(e);
+                    }
                 }
-            }
+            }.bindenv(this));
         }.bindenv(this));
-    }
+    }   
 
     /**
      * Deletes test data
      */
     function tearDown() {
-        this._firebase.remove(this._path, function (error, response) {
-            if (error) {
-                err(error);
-            } else {
-                ok("Removed test data at \""+ this._path + "\"");
-            }
+        imp.wakeup(2, function() { 
+            this._firebase.remove(this._path, function (error, response) {
+                if (error) {
+                    server.error(error);
+                } else {
+                    server.log("Removed test data at \""+ this._path + "\"");
+                }
+            }.bindenv(this))
         }.bindenv(this));
     }
 }
