@@ -44,16 +44,13 @@ class BasicTestCase extends ImpTestCase {
         return Promise(function (ok, err) {
             this._firebase.write(this._path, this._luckyNum, function (error, response) {
                 if (error) {
-                    server.error(error);
-                    err();
+                    err(error);
                 } else {
                     try {
                         this.assertEqual(this._luckyNum, response);
-                        server.log("Written test data at \""+ this._path + "\"");
-                        ok();
+                        ok("Written test data at \""+ this._path + "\"");
                     } catch (e) {
-                        server.error(e);
-                        err();
+                        err(e);
                     }
                 }
             }.bindenv(this));
