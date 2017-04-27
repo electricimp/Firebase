@@ -38,9 +38,9 @@ class BasicTestCase extends ImpTestCase {
     }
 
     /**
-     * Write test data
+     * Write, then read test data with callbacks
      */
-    function test01_write() {
+    function test01_callbackWriteRead() {
         return Promise(function (ok, err) {
             this._firebase.write(this._path, this._luckyNum, function (error, response) {
                 if (error) {
@@ -54,14 +54,7 @@ class BasicTestCase extends ImpTestCase {
                     }
                 }
             }.bindenv(this));
-        }.bindenv(this))
-    }
-
-    /**
-     * Test *basic* reads
-     */
-    function test02_read() {
-        return Promise(function (ok, err) {
+        }.bindenv(this)).then(Promise(function (ok, err) {
             this._firebase.read(this._path, function (error, data) {
                 if (error) {
                     err(error);
@@ -74,33 +67,31 @@ class BasicTestCase extends ImpTestCase {
                     }
                 }
             }.bindenv(this));
-        }.bindenv(this))
+        }.bindenv(this)))
     }
 
-  function test03_promiseWrite() {
+    /**
+     * Write, then read test data with promises
+     */
+    function test02_promiseWriteRead() {
         this._luckyNum = this._luckyNum + 1;
-        this._firebase.write(this._path, this._luckyNum )
+        this._firebase.write(this._path, this._luckyNum)
         .then(function (data) {
                   this.assertEqual(this._luckyNum, response);
               }.bindenv(this),
               function (err) {
-                  this.assertEqual(null, err);
-              }.bindenv(this)
-        );
-
-    }
-
-    function test04_promiseRead() {
-        this._firebase.write(this._path, this._luckyNum)
+                  assertTrue(false, err)
+              }.bindenv(this))
+        .then(this._firebase.write(this._path, this._luckyNum)
         .then(function (data) {
                   this.assertEqual(this._luckyNum, data);
               }.bindenv(this),
               function (err) {
-                  this.assertEqual(null, err);
+                  assertTrue(false, err)
               }.bindenv(this)
-        );
-
+        ));
     }
+
 
     /**
      * Deletes test data

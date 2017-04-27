@@ -29,13 +29,18 @@ class NoPromiseTestCase extends ImpTestCase {
     _path = null;
     _firebase = null;
     _luckyNum = null;
+    _myPromise = null;
 
+    /**
+     * Delete Promise lib for test no promise and no callback functionality
+     * Use _myPromise to check async code
+     */
     function setUp() {
         if (getroottable().Promise != null) {
-            delete getroottable().Promise; 
+            _myPromise = delete getroottable().Promise;   
         }
         this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-basic";
+        this._path = this.session + "-nopromise";
         this._luckyNum = math.rand() + "" + math.rand();
         return "Firebase instance \"" + FIREBASE_INSTANCE_NAME + "\" created";
     }
@@ -44,18 +49,20 @@ class NoPromiseTestCase extends ImpTestCase {
      * Write test data, but no callback and no promise used
      */
     function test01_write() { 
-        this._firebase.write(this._path, this._luckyNum);
-        this._firebase.read(this._path, function (error, data) {
-            if (error) {
-                err(error);
-            } else {
-                try {
-                    this.assertEqual(this._luckyNum, data);
-                    ok("Read test data at \""+ this._path + "\"");
-                } catch (e) {
-                    err(e);
+        return _myPromise(function (ok, err) { 
+            this._firebase.write(this._path, this._luckyNum);
+            this._firebase.read(this._path, function (error, data) {
+                if (error) {
+                    err(error);
+                } else {
+                    try {
+                        this.assertEqual(this._luckyNum, data);
+                        ok("Read test data at \""+ this._path + "\"");
+                    } catch (e) {
+                        err(e);
+                    }
                 }
-            }
+            }.bindenv(this));
         }.bindenv(this));
     }
 
@@ -63,12 +70,14 @@ class NoPromiseTestCase extends ImpTestCase {
      * Deletes test data
      */
     function tearDown() {
-        this._firebase.remove(this._path, function (error, response) {
-            if (error) {
-                err(error);
-            } else {
-                ok("Removed test data at \""+ this._path + "\"");
-            }
+        return _myPromise(function (ok, err) { 
+            this._firebase.remove(this._path, function (error, response) {
+                if (error) {
+                    err(error);
+                } else {
+                    ok("Removed test data at \""+ this._path + "\"");
+                }
+            }.bindenv(this));
         }.bindenv(this));
     }
 }
