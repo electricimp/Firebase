@@ -31,12 +31,14 @@ class NoPromiseTestCase extends ImpTestCase {
     _luckyNum = null;
     _myPromise = null;
 
+    /**
+     * Delete Promise lib for test no promise and no callback functionality
+     * Use _myPromise to check async code
+     */
     function setUp() {
         if (getroottable().Promise != null) {
-            _myPromise = Promise;
-            delete getroottable().Promise; 
+            _myPromise = delete getroottable().Promise;   
         }
-
         this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
         this._path = this.session + "-nopromise";
         this._luckyNum = math.rand() + "" + math.rand();
@@ -68,12 +70,14 @@ class NoPromiseTestCase extends ImpTestCase {
      * Deletes test data
      */
     function tearDown() {
-        this._firebase.remove(this._path, function (error, response) {
-            if (error) {
-                server.error(error);
-            } else {
-                server.log("Removed test data at \""+ this._path + "\"");
-            }
+        return _myPromise(function (ok, err) { 
+            this._firebase.remove(this._path, function (error, response) {
+                if (error) {
+                    err(error);
+                } else {
+                    ok("Removed test data at \""+ this._path + "\"");
+                }
+            }.bindenv(this));
         }.bindenv(this));
     }
 }
