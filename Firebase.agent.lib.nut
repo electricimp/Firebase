@@ -1,10 +1,30 @@
-// Copyright (c) 2015 Electric Imp
-// This file is licensed under the MIT License
-// http://opensource.org/licenses/MIT
+// MIT License
+//
+// Copyright 2015-2017 Electric Imp
+//
+// SPDX-License-Identifier: MIT
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+// EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+// OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+// ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
 
 class Firebase {
     // Library version
-    static version = [2,0,2];
+    static VERSION = "3.0.0";
     static KEEP_ALIVE = 60;     // Timeout for streaming
 
     // General
@@ -25,8 +45,8 @@ class Firebase {
     _data = null;               // Current snapshot of what we're streaming
     _callbacks = null;          // List of _callbacks for streaming request
     _keepAliveTimer = null;     // Wakeup timer that watches for a dead Firebase socket
-    _promiseIncluded = null ;   // indicate if Promise library is included
-    _bufferedInput = null;      // Buffer used for reading streamed data
+    _promiseIncluded = null;   // indicate if Promise library is included
+    _bufferedInput = null;    //  Buffer used for reading streamed data
     /***************************************************************************
      * Constructor
      * Returns: FirebaseStream object
@@ -42,13 +62,13 @@ class Firebase {
         _baseUrl = "https://" + _db + "." + domain;
         _auth = auth;
 
+        _bufferedInput = "";
+
         _data = {};
 
         _callbacks = {};
 
         _promiseIncluded = ("Promise" in getroottable());
-
-        _bufferedInput = "";
     }
 
     /***************************************************************************
@@ -163,13 +183,7 @@ class Firebase {
         }
         local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-
-        } else {
-            return  _returnPromise(request);
-        }
-
+        return _processResponse(request,callback);
     }
 
     /***************************************************************************
@@ -187,11 +201,7 @@ class Firebase {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
         local request = http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-           return _returnPromise(request);
-        }
+        return _processResponse(request,callback);
 
     }
 
@@ -210,12 +220,7 @@ class Firebase {
     function write(path, data, callback = null) {
         local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-            return _returnPromise(request);
-        }
-
+        return _processResponse(request,callback);
     }
 
     /***************************************************************************
@@ -234,11 +239,7 @@ class Firebase {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
         local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-            return _returnPromise(request);
-        }
+        return _processResponse(request,callback);
 
     }
 
@@ -255,12 +256,7 @@ class Firebase {
     function remove(path, callback = null) {
         local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        if (callback) {
-            _processResponse(request,callback);
-        } else {
-            return _returnPromise(request);
-        }
-
+        return _processResponse(request,callback);
     }
 
 
@@ -344,7 +340,7 @@ class Firebase {
                 _updateCache(message);
 
                 // Check out every callback for matching path
-                foreach (path,callback in _callbacks) {
+                foreach (path, callback in _callbacks) {
 
                     if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
                         // This is an exact match or a subbranch
@@ -388,63 +384,95 @@ class Firebase {
     }
 
     // parses event messages
+    // (https://www.w3.org/TR/eventsource/#parsing-an-event-stream)
+    // Message example:
+    // event: put
+    // data: {"path": "/c", "data": {"foo": true, "bar": false}}
+    // All messages except errors have two lines
+    // function can parse several messages, not full message or both
     function _parseEventMessage(input) {
-        // make sure we've read till the end of the "data" line
         local text = _bufferedInput + input;
-        if (!text.find("}\n") && !text.find("null\n")) {
-            // TODO:
-            // Even though that's an indicator of the end of the "data" line, this might
-            // not be sufficient in some cases that we haven't got into yet. We'll need
-            // to implement a fair parser if we hit this issue again in the future.
-            _bufferedInput = text;
-            return [];
-        }
         _bufferedInput = "";
 
         // split message into parts
-        local alllines = split(text, "\n");
-        if (alllines.len() < 2) return [];
-        local returns = [];
-        for (local i = 0; i < alllines.len(); ) {
-            local lines = [];
+        local allLines = split(text, "\n");
 
-            lines.push(alllines[i++]);
-            lines.push(alllines[i++]);
-            if (i < alllines.len() && alllines[i+1] == "}") {
-                lines.push(alllines[i++]);
+        // Check, if we have at least one message
+        if (allLines.len() < 2) {
+            _bufferedInput = text;
+            return [];
+        }
+
+        local parsedEvents = [];
+
+        for (local i = 0; i < allLines.len(); ) {
+            local lines = [];
+            //try to get 2 lines
+            if (i + 1 < allLines.len()) {
+                lines.push(allLines[i++]);
+                lines.push(allLines[i++]);
+            } else {
+                // check, if we have at least one line, that we should to save
+                if (i < allLines.len()) {
+                    hasEndOfLine = text[text.len() - 1] == "\n";
+                    _bufferedInput = lines[i] + (hasEndOfLine ? "\n" : "");
+                }
+                return parsedEvents;
             }
 
-            // Check for error conditions
-            if (lines.len() == 3 && lines[0] == "{" && lines[2] == "}") {
-                local error = http.jsondecode(text);
-                _logError("Firebase error message: " + error.error);
-                continue;   //The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
+            // Error have 3 lines and last one is "}"
+            if (i < allLines.len() && allLines[i] == "}") {
+                lines.push(allLines[i++]);
+                try {
+                    local error = http.jsondecode(text);
+                    _logError("Firebase error message: " + error.error);
+                } catch (e) {
+                    _logError("Exeption while parsing error message: " + e);
+                }
+                continue;   // The continue operator jumps to the next iteration of the loop skipping the execution of the following statements.
             }
 
             // get the event
             local eventLine = lines[0];
             local event = eventLine.slice(7);
 
-            if(event.tolower() == "keep-alive") continue;
+            // keep-alive contains no data
+            if (event.tolower() == "keep-alive") continue;
 
             // get the data
             local dataLine = lines[1];
             local dataString = dataLine.slice(6);
 
             // pull interesting bits out of the data
-            local d;
+            local d = null;
             try {
+                // try to encode json to get data and path fields
                 d = http.jsondecode(dataString);
             } catch (e) {
-                _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
-                throw e;
+                // Check, if it is last line and we want to wait another part, or
+                // message is broken
+                if (i + 1 < allLines.len()) {
+                    _logError("Exception while decoding (" + dataString.len() + " bytes): " + dataString);
+                    _bufferedInput = "";
+                    continue;
+                } else {
+                    // add last not full message to buffer
+                    local hasEndOfLine = text[text.len() - 1] == "\n";
+                    for (local j = 0; j < lines.len(); j++) {
+                        local isLastString = j == lines.len() - 1;
+                        _bufferedInput += lines[j] + (!isLastString || hasEndOfLine ? "\n" : "");
+                    }
+                    return parsedEvents;
+                }
             }
 
             // return a useful object
-            returns.push({ "event": event, "path": d.path, "data": d.data });
+            local path = d ? d.path : null;
+            local data = d ? d.data : null;
+            parsedEvents.push({"event": event, "path": path, "data": data});
         }
 
-        return returns;
+        return parsedEvents;
     }
 
     // Updates the local cache
@@ -585,49 +613,52 @@ class Firebase {
         if (_debug) server.error(message);
     }
 
-    // return a Promise if the Promise library is included
-    function _returnPromise (request){
-        if (_promiseIncluded) {
-            return Promise(function (resolve,reject){
-                    request.sendasync(function(res){
-                        local data = null ;
-                        try {
-                            data = http.jsondecode(res.body);
-                            if ( 200 <= res.statuscode && res.statuscode < 300) {
-                                resolve(data);
-                            } else {
-                                reject(data.error);
-                            }
-                        } catch (err){
-                            reject (err);
-                        }
-                    }.bindenv(this));
-            });
-        }
-        return;
+    // return a Promise
+    function _createRequestPromise(request) {
+        return Promise(function (resolve, reject) {
+            request.sendasync(_createResponseHandler(resolve, reject));
+        }.bindenv(this));
     }
 
     // process the http response accordingly
-    function _processResponse (request,callback) {
-        request.sendasync(function(res) {
-            local data = res.body;
+    function _sendRequest(request, callback) {
+        local onSuccess = function (data) {
+            callback && callback(null, data);
+        };
+        local onError = function (err) {
+            callback && callback(err, null);
+        };
+        request.sendasync(_createResponseHandler(onSuccess, onError));
+    }
+
+    function _createResponseHandler(onSuccess, onError) {
+        return function (res) {
+            local response = res.body;
             try {
-                if (data == "") {
-                  data = null;
-                }
-                if (data != null) {
-                    data = http.jsondecode(data);                    
+                local data = null;
+                if (response && response.len() > 0) {
+                    data = http.jsondecode(response);
                 }
                 if (200 <= res.statuscode && res.statuscode < 300) {
-                    callback(null, data);
+                    onSuccess(data);
                 } else if (typeof data == "table" && "error" in data) {
-                    callback(data.error, null);
+                    local error = data ? data.error : null;
+                    onError(error);
                 } else {
-                    callback("Error " + res.statuscode, null);
+                    onError("Error " + res.statuscode);
                 }
             } catch (err) {
-                callback(err, null);
+                onError(err);
             }
-        }.bindenv(this))
+        }
+    }
+
+    // use Promise if promise libary included and callback != null
+    function _processResponse(request, callback) {
+        if (_promiseIncluded && callback == null) {
+            return _createRequestPromise(request);
+        } else {
+            return _sendRequest(request, callback);
+        }
     }
 }
