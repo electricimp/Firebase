@@ -25,36 +25,32 @@
 const FIREBASE_AUTH_KEY = "#{env:FIREBASE_AUTH_KEY}";
 const FIREBASE_INSTANCE_NAME = "#{env:FIREBASE_INSTANCE_NAME}";
 
-class BasicTestCase extends ImpTestCase {
+class NoPromiseTestCase extends ImpTestCase {
     _path = null;
     _firebase = null;
     _luckyNum = null;
+    _myPromise = null;
 
+    /**
+     * Delete Promise lib for test no promise and no callback functionality
+     * Use _myPromise to check async code
+     */
     function setUp() {
+        if (getroottable().Promise != null) {
+            _myPromise = delete getroottable().Promise;   
+        }
         this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-basic";
+        this._path = this.session + "-nopromise";
         this._luckyNum = math.rand() + "" + math.rand();
         return "Firebase instance \"" + FIREBASE_INSTANCE_NAME + "\" created";
     }
 
     /**
-     * Write, then read test data with callbacks
+     * Write test data, but no callback and no promise used
      */
-    function test01_callbackWriteRead() {
-        return Promise(function (ok, err) {
-            this._firebase.write(this._path, this._luckyNum, function (error, response) {
-                if (error) {
-                    err(error);
-                } else {
-                    try {
-                        this.assertEqual(this._luckyNum, response);
-                        ok("Written test data at \""+ this._path + "\"");
-                    } catch (e) {
-                        err(e);
-                    }
-                }
-            }.bindenv(this));
-        }.bindenv(this)).then(Promise(function (ok, err) {
+    function test01_write() { 
+        return _myPromise(function (ok, err) { 
+            this._firebase.write(this._path, this._luckyNum);
             this._firebase.read(this._path, function (error, data) {
                 if (error) {
                     err(error);
@@ -67,37 +63,14 @@ class BasicTestCase extends ImpTestCase {
                     }
                 }
             }.bindenv(this));
-        }.bindenv(this)))
+        }.bindenv(this));
     }
-
-    /**
-     * Write, then read test data with promises
-     */
-    function test02_promiseWriteRead() {
-        this._luckyNum = this._luckyNum + 1;
-        this._firebase.write(this._path, this._luckyNum)
-        .then(function (data) {
-                  this.assertEqual(this._luckyNum, response);
-              }.bindenv(this),
-              function (err) {
-                  assertTrue(false, err)
-              }.bindenv(this))
-        .then(this._firebase.write(this._path, this._luckyNum)
-        .then(function (data) {
-                  this.assertEqual(this._luckyNum, data);
-              }.bindenv(this),
-              function (err) {
-                  assertTrue(false, err)
-              }.bindenv(this)
-        ));
-    }
-
 
     /**
      * Deletes test data
      */
     function tearDown() {
-        return Promise(function (ok, err) {
+        return _myPromise(function (ok, err) { 
             this._firebase.remove(this._path, function (error, response) {
                 if (error) {
                     err(error);
@@ -105,6 +78,6 @@ class BasicTestCase extends ImpTestCase {
                     ok("Removed test data at \""+ this._path + "\"");
                 }
             }.bindenv(this));
-        }.bindenv(this))
+        }.bindenv(this));
     }
 }
