@@ -22,8 +22,8 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-const FIREBASE_AUTH_KEY = "#{env:FIREBASE_AUTH_KEY}";
-const FIREBASE_INSTANCE_NAME = "#{env:FIREBASE_INSTANCE_NAME}";
+const FIREBASE_AUTH_KEY = "oxrQOe0o6lxtjrDczO3r8kTptac2XoCvc5q9yLML";
+const FIREBASE_INSTANCE_NAME = "testerfirebase-e7ea4";
 
 class NoPromiseTestCase extends ImpTestCase {
     _path = null;
@@ -36,7 +36,7 @@ class NoPromiseTestCase extends ImpTestCase {
      * Use _myPromise to check async code
      */
     function setUp() {
-        if (getroottable().Promise != null) {
+        if ("Promise" in getroottable()) {
             _myPromise = delete getroottable().Promise;   
         }
         this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
@@ -51,6 +51,7 @@ class NoPromiseTestCase extends ImpTestCase {
     function test01_write() { 
         return _myPromise(function (ok, err) { 
             this._firebase.write(this._path, this._luckyNum);
+            imp.sleep(1); // let the writing go through
             this._firebase.read(this._path, function (error, data) {
                 if (error) {
                     err(error);
