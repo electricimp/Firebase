@@ -36,7 +36,7 @@ class NoPromiseTestCase extends ImpTestCase {
      * Use _myPromise to check async code
      */
     function setUp() {
-        if (getroottable().Promise != null) {
+        if ("Promise" in getroottable()) {
             _myPromise = delete getroottable().Promise;   
         }
         this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
@@ -51,6 +51,7 @@ class NoPromiseTestCase extends ImpTestCase {
     function test01_write() { 
         return _myPromise(function (ok, err) { 
             this._firebase.write(this._path, this._luckyNum);
+            imp.sleep(1); // let the writing go through
             this._firebase.read(this._path, function (error, data) {
                 if (error) {
                     err(error);
