@@ -145,7 +145,6 @@ class BasicTestCase extends ImpTestCase {
      * Deletes test data
      */
     function tearDown() {
-        return;
         return Promise(function (ok, err) {
             this._firebase.remove(this._path, function (error, response) {
                 if (error) {
