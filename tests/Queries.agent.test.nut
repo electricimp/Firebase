@@ -22,8 +22,8 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-const FIREBASE_AUTH_KEY = "#{env:FIREBASE_AUTH_KEY}";
-const FIREBASE_INSTANCE_NAME = "#{env:FIREBASE_INSTANCE_NAME}";
+const FIREBASE_AUTH_KEY = "@{FIREBASE_AUTH_KEY}";
+const FIREBASE_INSTANCE_NAME = "@{FIREBASE_INSTANCE_NAME}";
 
 class BasicTestCase extends ImpTestCase {
     _path = null;
@@ -145,7 +145,6 @@ class BasicTestCase extends ImpTestCase {
      * Deletes test data
      */
     function tearDown() {
-        return;
         return Promise(function (ok, err) {
             this._firebase.remove(this._path, function (error, response) {
                 if (error) {
