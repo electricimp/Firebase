@@ -24,7 +24,7 @@
 
 class Firebase {
     // Library version
-    static VERSION = "3.0.1";
+    static VERSION = "3.1.0";
     static KEEP_ALIVE = 60;     // Timeout for streaming
     static DEFAULT_BACK_OFF_TIMEOUT_SEC = 60; // Backoff time
 
