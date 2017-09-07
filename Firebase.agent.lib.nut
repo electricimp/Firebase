@@ -657,29 +657,38 @@ class Firebase {
                     onSuccess(data);
                     _tooManyReqTimer = false;
                 } else if (res.statuscode == 28 || res.statuscode == 429) {
-                    // too many requests, report error to cb, set _tooManyReqTimer
+                    local now = time();
+                    // Too many requests, set _tooManyReqTimer to prevent more requests to FB
                     if (_tooManyReqTimer == false) {
-                        _tooManyReqTimer = time() + DEFAULT_BACK_OFF_TIMEOUT_SEC;
-                    } else {
+                        // This is the first 429 we have seen set a default timeout
+                        _tooManyReqTimer = now + DEFAULT_BACK_OFF_TIMEOUT_SEC;
+                    } else if (_tooManyReqTimer >= now) {
+                        // Firebase is still overwhelmed after first timeout expired, 
+                        // Let's block requests for longer to let FB recover
                         _tooManyReqCounter += 1
-                        _tooManyReqTimer = time() + (DEFAULT_BACK_OFF_TIMEOUT_SEC * _tooManyReqCounter);
+                        _tooManyReqTimer = now + (DEFAULT_BACK_OFF_TIMEOUT_SEC * _tooManyReqCounter);
                     }
+                    // Pass error to callback
                     onError("Error " + res.statuscode);
                 } else if (typeof data == "table" && "error" in data) {
+                    _tooManyReqTimer = false;
                     local error = data ? data.error : null;
                     onError(error);
                 } else {
+                    _tooManyReqTimer = false;
                     onError("Error " + res.statuscode);
                 }
             } catch (err) {
+                _tooManyReqTimer = false;
                 onError(err);
             }
         }
     }
 
     function _processResponse(request, callback) {
-        // use Promise if promise libary included and callback != null
+        // Use Promise if promise libary included and callback != null
         local usePromise = (_promiseIncluded && callback == null);
+        
         // Only send request if we haven't received a 429 error recently
         if (_tooManyReqTimer == false || _tooManyReqTimer >= time()) {
             if (usePromise) {
