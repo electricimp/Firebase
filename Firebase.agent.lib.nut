@@ -51,7 +51,8 @@ class Firebase {
     // General
     _promiseIncluded = null;    // indicate if Promise library is included
     _backOffTimer = null;       // Timer used to backoff stream if FB is getting hammered
-    _tooManyReqTimer = false;   // TImer used to reject requests if FB is getting hammered
+    _tooManyReqTimer = false;   // Timer used to reject requests if FB is getting hammered
+    _tooManyReqCounter = 1;     // Counter used to backoff incoming request
     
     /***************************************************************************
      * Constructor
@@ -660,7 +661,8 @@ class Firebase {
                     if (_tooManyReqTimer == false) {
                         _tooManyReqTimer = time() + DEFAULT_BACK_OFF_TIMEOUT_SEC;
                     } else {
-                        _tooManyReqTimer *= 2;
+                        _tooManyReqCounter += 1
+                        _tooManyReqTimer = time() + (DEFAULT_BACK_OFF_TIMEOUT_SEC * _tooManyReqCounter);
                     }
                     onError("Error " + res.statuscode);
                 } else if (typeof data == "table" && "error" in data) {
