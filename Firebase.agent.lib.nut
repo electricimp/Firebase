@@ -314,6 +314,8 @@ class Firebase {
         return function(resp) {
             _streamingRequest = null;
             if (resp.statuscode == 307 && "location" in resp.headers) {
+                // Reset backoff timer
+                _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
                 // set new location
                 local location = resp.headers["location"];
                 local p = location.find("." + _domain);
@@ -339,7 +341,7 @@ class Firebase {
     //TODO: We are not currently explicitly handling https://www.firebase.com/docs/rest/api/#section-streaming-cancel and https://www.firebase.com/docs/rest/api/#section-streaming-auth-revoked
     function _onStreamDataFactory(path, onError) {
         return function(messageString) {
-            // // Tickle the keep alive timer
+            // Tickle the keep alive timer
             if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
             _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
             // We have received a resp from firebase, so reset backoff timer
@@ -627,7 +629,7 @@ class Firebase {
     // return a Promise
     function _createRequestPromise(request) {
         return Promise(function (resolve, reject) {
-            request.sendasync(_createResponseHandler(reqest, resolve, reject));
+            request.sendasync(_createResponseHandler(request, resolve, reject));
         }.bindenv(this));
     }
 
@@ -653,7 +655,7 @@ class Firebase {
                 if (200 <= res.statuscode && res.statuscode < 300) {
                     onSuccess(data);
                     _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
-                } else if (resp.statuscode == 28 || resp.statuscode == 429) {
+                } else if (res.statuscode == 28 || res.statuscode == 429) {
                     // too many requests, backoff, resend req
                     imp.wakeup(_backOffTimer, function() {
                         request.sendasync(_createResponseHandler(request, onSuccess, onError));
