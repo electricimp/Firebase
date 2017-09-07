@@ -50,8 +50,8 @@ class Firebase {
     
     // General
     _promiseIncluded = null;    // indicate if Promise library is included
-    _backOffTimer = null;       // Timer used to backoff if too manny requests are made
-    
+    _backOffTimer = null;       // Timer used to backoff stream if FB is getting hammered
+    _tooManyReqTimer = false;   // TImer used to reject requests if FB is getting hammered
     
     /***************************************************************************
      * Constructor
@@ -323,7 +323,7 @@ class Firebase {
                 _baseUrl = location.slice(0, p);
                 return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
             } else if (resp.statuscode == 28 || resp.statuscode == 429) {
-                // if we timed out, just reconnect after a small delay
+                // if we timed out, just reconnect after a delay
                 imp.wakeup(_backOffTimer, function() { return stream(path, onError); }.bindenv(this));
                 _backOffTimer *= 2;
             } else {
@@ -344,7 +344,7 @@ class Firebase {
             // Tickle the keep alive timer
             if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
             _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
-            // We have received a resp from firebase, so reset backoff timer
+            // We have received a resp from firebase, so set backoff timer to default 
             _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
             
             local messages = _parseEventMessage(messageString);
@@ -629,7 +629,7 @@ class Firebase {
     // return a Promise
     function _createRequestPromise(request) {
         return Promise(function (resolve, reject) {
-            request.sendasync(_createResponseHandler(request, resolve, reject).bindenv(this));
+            request.sendasync(_createResponseHandler(resolve, reject).bindenv(this));
         }.bindenv(this));
     }
 
@@ -641,10 +641,10 @@ class Firebase {
         local onError = function (err) {
             callback && callback(err, null);
         };
-        request.sendasync(_createResponseHandler(request, onSuccess, onError).bindenv(this));
+        request.sendasync(_createResponseHandler(onSuccess, onError).bindenv(this));
     }
 
-    function _createResponseHandler(request, onSuccess, onError) {
+    function _createResponseHandler(onSuccess, onError) {
         return function (res) {
             local response = res.body;
             try {
@@ -654,13 +654,15 @@ class Firebase {
                 }
                 if (200 <= res.statuscode && res.statuscode < 300) {
                     onSuccess(data);
-                    _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
+                    _tooManyReqTimer = false;
                 } else if (res.statuscode == 28 || res.statuscode == 429) {
-                    // too many requests, backoff, resend req
-                    imp.wakeup(_backOffTimer, function() {
-                        request.sendasync(_createResponseHandler(request, onSuccess, onError).bindenv(this));
-                    }.bindenv(this))
-                    _backOffTimer *= 2;
+                    // too many requests, report error to cb, set _tooManyReqTimer
+                    if (_tooManyReqTimer == false) {
+                        _tooManyReqTimer = time() + DEFAULT_BACK_OFF_TIMEOUT_SEC;
+                    } else {
+                        _tooManyReqTimer *= 2;
+                    }
+                    onError("Error " + res.statuscode);
                 } else if (typeof data == "table" && "error" in data) {
                     local error = data ? data.error : null;
                     onError(error);
@@ -673,12 +675,26 @@ class Firebase {
         }
     }
 
-    // use Promise if promise libary included and callback != null
     function _processResponse(request, callback) {
-        if (_promiseIncluded && callback == null) {
-            return _createRequestPromise(request);
+        // use Promise if promise libary included and callback != null
+        local usePromise = (_promiseIncluded && callback == null);
+        // Only send request if we haven't received a 429 error recently
+        if (_tooManyReqTimer == false || _tooManyReqTimer >= time()) {
+            if (usePromise) {
+                return _createRequestPromise(request);
+            } else {
+                return _sendRequest(request, callback);
+            }
         } else {
-            return _sendRequest(request, callback);
+            local error = "ERROR: Too many requests to Firebase, try request again after " + _tooManyReqTimer;
+            if (usePromise) {
+                return Promise.reject(error);
+            } else {
+                imp.wakeup(0, function() {
+                    callback(error, null);
+                }.bindenv(this)
+            }
         }
     }
+
 }
