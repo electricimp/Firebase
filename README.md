@@ -1,4 +1,4 @@
-# Firebase v3.0.0
+# Firebase v3.0.1
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 

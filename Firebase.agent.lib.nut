@@ -629,7 +629,7 @@ class Firebase {
     // return a Promise
     function _createRequestPromise(request) {
         return Promise(function (resolve, reject) {
-            request.sendasync(_createResponseHandler(request, resolve, reject));
+            request.sendasync(_createResponseHandler(request, resolve, reject).bindenv(this));
         }.bindenv(this));
     }
 
@@ -641,7 +641,7 @@ class Firebase {
         local onError = function (err) {
             callback && callback(err, null);
         };
-        request.sendasync(_createResponseHandler(request, onSuccess, onError));
+        request.sendasync(_createResponseHandler(request, onSuccess, onError).bindenv(this));
     }
 
     function _createResponseHandler(request, onSuccess, onError) {
@@ -658,7 +658,7 @@ class Firebase {
                 } else if (res.statuscode == 28 || res.statuscode == 429) {
                     // too many requests, backoff, resend req
                     imp.wakeup(_backOffTimer, function() {
-                        request.sendasync(_createResponseHandler(request, onSuccess, onError));
+                        request.sendasync(_createResponseHandler(request, onSuccess, onError).bindenv(this));
                     }.bindenv(this))
                     _backOffTimer *= 2;
                 } else if (typeof data == "table" && "error" in data) {
