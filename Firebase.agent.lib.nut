@@ -662,7 +662,7 @@ class Firebase {
                     if (_tooManyReqTimer == false) {
                         // This is the first 429 we have seen set a default timeout
                         _tooManyReqTimer = now + DEFAULT_BACK_OFF_TIMEOUT_SEC;
-                    } else if (_tooManyReqTimer >= now) {
+                    } else if (_tooManyReqTimer <= now) {
                         // Firebase is still overwhelmed after first timeout expired, 
                         // Let's block requests for longer to let FB recover
                         _tooManyReqCounter += 1
@@ -690,7 +690,7 @@ class Firebase {
         local usePromise = (_promiseIncluded && callback == null);
 
         // Only send request if we haven't received a 429 error recently
-        if (_tooManyReqTimer == false || _tooManyReqTimer >= time()) {
+        if (_tooManyReqTimer == false || _tooManyReqTimer <= time()) {
             if (usePromise) {
                 return _createRequestPromise(request);
             } else {
