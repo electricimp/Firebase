@@ -688,7 +688,7 @@ class Firebase {
     function _processResponse(request, callback) {
         // Use Promise if promise libary included and callback != null
         local usePromise = (_promiseIncluded && callback == null);
-        
+
         // Only send request if we haven't received a 429 error recently
         if (_tooManyReqTimer == false || _tooManyReqTimer >= time()) {
             if (usePromise) {
@@ -703,7 +703,7 @@ class Firebase {
             } else {
                 imp.wakeup(0, function() {
                     callback(error, null);
-                }.bindenv(this)
+                }.bindenv(this))
             }
         }
     }
