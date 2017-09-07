@@ -24,10 +24,11 @@
 
 class Firebase {
     // Library version
-    static VERSION = "3.0.0";
+    static VERSION = "3.0.1";
     static KEEP_ALIVE = 60;     // Timeout for streaming
+    static DEFAULT_BACK_OFF_TIMEOUT_SEC = 60; // Backoff time
 
-    // General
+    // Firebase
     _db = null;                 // The name of your firebase instance
     _auth = null;               // _auth key (if auth is enabled)
     _baseUrl = null;            // base url (may change with 307 responses)
@@ -45,8 +46,13 @@ class Firebase {
     _data = null;               // Current snapshot of what we're streaming
     _callbacks = null;          // List of _callbacks for streaming request
     _keepAliveTimer = null;     // Wakeup timer that watches for a dead Firebase socket
-    _promiseIncluded = null;   // indicate if Promise library is included
-    _bufferedInput = null;    //  Buffer used for reading streamed data
+    _bufferedInput = null;      //  Buffer used for reading streamed data
+    
+    // General
+    _promiseIncluded = null;    // indicate if Promise library is included
+    _backOffTimer = null;       // Timer used to backoff if too manny requests are made
+    
+    
     /***************************************************************************
      * Constructor
      * Returns: FirebaseStream object
@@ -69,6 +75,7 @@ class Firebase {
         _callbacks = {};
 
         _promiseIncluded = ("Promise" in getroottable());
+        _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
     }
 
     /***************************************************************************
@@ -315,13 +322,15 @@ class Firebase {
                 return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
             } else if (resp.statuscode == 28 || resp.statuscode == 429) {
                 // if we timed out, just reconnect after a small delay
-                imp.wakeup(0, function() { return stream(path, onError); }.bindenv(this));
+                imp.wakeup(_backOffTimer, function() { return stream(path, onError); }.bindenv(this));
+                _backOffTimer *= 2;
             } else {
                 // Otherwise log an error (if enabled)
                 _logError("Stream closed with error " + resp.statuscode);
 
                 // Invoke our error handler
                 imp.wakeup(0, function() { onError(resp); });
+                _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
             }
         }.bindenv(this);
     }
@@ -330,10 +339,12 @@ class Firebase {
     //TODO: We are not currently explicitly handling https://www.firebase.com/docs/rest/api/#section-streaming-cancel and https://www.firebase.com/docs/rest/api/#section-streaming-auth-revoked
     function _onStreamDataFactory(path, onError) {
         return function(messageString) {
-            // Tickle the keep alive timer
+            // // Tickle the keep alive timer
             if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
             _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
-
+            // We have received a resp from firebase, so reset backoff timer
+            _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
+            
             local messages = _parseEventMessage(messageString);
             foreach (message in messages) {
                 // Update the internal cache
@@ -616,7 +627,7 @@ class Firebase {
     // return a Promise
     function _createRequestPromise(request) {
         return Promise(function (resolve, reject) {
-            request.sendasync(_createResponseHandler(resolve, reject));
+            request.sendasync(_createResponseHandler(reqest, resolve, reject));
         }.bindenv(this));
     }
 
@@ -628,10 +639,10 @@ class Firebase {
         local onError = function (err) {
             callback && callback(err, null);
         };
-        request.sendasync(_createResponseHandler(onSuccess, onError));
+        request.sendasync(_createResponseHandler(request, onSuccess, onError));
     }
 
-    function _createResponseHandler(onSuccess, onError) {
+    function _createResponseHandler(request, onSuccess, onError) {
         return function (res) {
             local response = res.body;
             try {
@@ -641,6 +652,13 @@ class Firebase {
                 }
                 if (200 <= res.statuscode && res.statuscode < 300) {
                     onSuccess(data);
+                    _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
+                } else if (resp.statuscode == 28 || resp.statuscode == 429) {
+                    // too many requests, backoff, resend req
+                    imp.wakeup(_backOffTimer, function() {
+                        request.sendasync(_createResponseHandler(request, onSuccess, onError));
+                    }.bindenv(this))
+                    _backOffTimer *= 2;
                 } else if (typeof data == "table" && "error" in data) {
                     local error = data ? data.error : null;
                     onError(error);
