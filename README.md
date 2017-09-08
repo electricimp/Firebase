@@ -10,7 +10,7 @@ The Firebase library allows you to easily integrate your agent code with Firebas
 
 ### Optional Callbacks/Promises
 
-The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *response*. If no error is encountered, the error parameter will be `null`.
+The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *response*. If no error is encountered, the error parameter will be `null`. If Firebase returns a 429 error the library will prevent further requests from being processed for at least 60 seconds, and an error will be passed to the callback's error parameter.
 
 As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
@@ -80,7 +80,7 @@ Creates a streaming request using the *path* as the base address to track. If no
 
 An optional table of *uriParams* can be supplied in order to use Firebase queries.
 
-An optional *onErrorCallback* parameter can be supplied that will be invoked if errors occur while making streaming requests. If no *onErrorCallback* is supplied, the Firebase class will attempt to silently and automatically reconnect when it encounters an error. If an *onErrorCallback* is supplied, it is up to the developer to re-initiate the *stream()* request in the callback.
+An optional *onErrorCallback* parameter can be supplied that will be invoked if errors occur while making streaming requests. The Firebase class will attempt to silently and automatically reconnect when it encounters a 429 or 503 status code error. For all other errors, if an *onErrorCallback* is supplied, it is up to the developer to re-initiate the *stream()* request in the callback.
 
 The *onErrorCallback* takes a single parameter: the [HTTP Response Table](https://electricimp.com/docs/api/httprequest/sendasync/) from the request.
 
@@ -128,7 +128,7 @@ firebase.on("/settings", function(path, data) {
 
 ### read(*path[, uriParams][, callback]*)
 
-Reads data from the specified path (ie. performs a GET request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code.
+Reads data from the specified path (ie. performs a GET request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code. 
 
 ```squirrel
 // Read all the settings:
