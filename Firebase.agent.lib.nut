@@ -323,7 +323,7 @@ class Firebase {
                 p = location.find("/", p);
                 _baseUrl = location.slice(0, p);
                 return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
-            } else if (resp.statuscode == 28 || resp.statuscode == 429) {
+            } else if (resp.statuscode == 28 || resp.statuscode == 429 || || res.statuscode == 503) {
                 // if we timed out, just reconnect after a delay
                 imp.wakeup(_backOffTimer, function() { return stream(path, onError); }.bindenv(this));
                 _backOffTimer *= 2;
@@ -656,7 +656,7 @@ class Firebase {
                 if (200 <= res.statuscode && res.statuscode < 300) {
                     onSuccess(data);
                     _tooManyReqTimer = false;
-                } else if (res.statuscode == 28 || res.statuscode == 429) {
+                } else if (res.statuscode == 28 || res.statuscode == 429 || res.statuscode == 503) {
                     local now = time();
                     // Too many requests, set _tooManyReqTimer to prevent more requests to FB
                     if (_tooManyReqTimer == false) {
