@@ -323,7 +323,7 @@ class Firebase {
                 p = location.find("/", p);
                 _baseUrl = location.slice(0, p);
                 return imp.wakeup(0, function() { stream(path, onError); }.bindenv(this));
-            } else if (resp.statuscode == 28 || resp.statuscode == 429 || || res.statuscode == 503) {
+            } else if (resp.statuscode == 28 || resp.statuscode == 429 || res.statuscode == 503) {
                 // if we timed out, just reconnect after a delay
                 imp.wakeup(_backOffTimer, function() { return stream(path, onError); }.bindenv(this));
                 _backOffTimer *= 2;
