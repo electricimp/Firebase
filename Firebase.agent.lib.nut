@@ -665,8 +665,7 @@ class Firebase {
                     } else if (_tooManyReqTimer <= now) {
                         // Firebase is still overwhelmed after first timeout expired, 
                         // Let's block requests for longer to let FB recover
-                        _tooManyReqCounter += 1
-                        _tooManyReqTimer = now + (DEFAULT_BACK_OFF_TIMEOUT_SEC * _tooManyReqCounter);
+                        _tooManyReqTimer = now + (DEFAULT_BACK_OFF_TIMEOUT_SEC * _tooManyReqCounter++);
                     }
                     // Pass error to callback
                     onError("Error " + res.statuscode);
@@ -688,16 +687,13 @@ class Firebase {
     function _processResponse(request, callback) {
         // Use Promise if promise libary included and callback != null
         local usePromise = (_promiseIncluded && callback == null);
+        local now = time();
 
         // Only send request if we haven't received a 429 error recently
-        if (_tooManyReqTimer == false || _tooManyReqTimer <= time()) {
-            if (usePromise) {
-                return _createRequestPromise(request);
-            } else {
-                return _sendRequest(request, callback);
-            }
+        if (_tooManyReqTimer == false || _tooManyReqTimer <= now) {
+            return (usePromise) ? _createRequestPromise(request) : _sendRequest(request, callback);
         } else {
-            local error = "ERROR: Too many requests to Firebase, try request again after " + _tooManyReqTimer;
+            local error = "ERROR: Too many requests to Firebase, try request again in " + (_tooManyReqTimer - now) + " seconds.";
             if (usePromise) {
                 return Promise.reject(error);
             } else {
