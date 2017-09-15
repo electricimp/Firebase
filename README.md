@@ -10,7 +10,7 @@ The Firebase library allows you to easily integrate your agent code with Firebas
 
 ### Optional Callbacks/Promises
 
-The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *response*. If no error is encountered, the error parameter will be `null`. If Firebase returns a 429 error the library will prevent further requests from being processed for at least 60 seconds, and an error will be passed to the callback's error parameter.
+The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *response*. If no error is encountered, *error* will be `null`. If Firebase returns a 429 error the library will now prevent further requests from being processed for at least 60 seconds, and an error will be passed to the callback’s *error* parameter.
 
 As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
@@ -20,14 +20,14 @@ As an alternative to passing in a callback, you can include the Electric Imp Pro
 
 The Firebase class must be instantiated with an instance name, and optionally an authorization Key, a custom Firebase domain and a debug flag.
 
-| Parameter | Type   | Default            | Notes    |
-| --------- | ------ | ------------------ | -------- |
-| *instance*  | String | n/a                |          |
-| *auth*      | String | `null` (no authorization) | Optional |
-| *domain*    | String | `"firebaseio.com"`  | Optional |
-| *debug*    | Boolean   | `true`             | Optional. Set to `false` to supress error logging within<br>the Firebase class |
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| *instance* | String | n/a | |
+| *auth* | String | `null` (no authorization) | Optional |
+| *domain* | String | `"firebaseio.com"` | Optional |
+| *debug* | Boolean | `true` | Optional. Set to `false` to supress error logging within the Firebase class |
 
-The domain and instance are used to construct the url requests are made against in the following was: `https://{instance}.{domain}`.
+The domain and instance are used to construct the URL that requests are made against in the following way: `https://{instance}.{domain}`.
 
 ```squirrel
 const FIREBASE_NAME = "<YOUR_FIREBASE_NAME>";
@@ -40,7 +40,7 @@ firebase <- Firebase(FIREBASE_NAME, FIREBASE_AUTH_KEY);
 
 ### on(*path, callback*)
 
-Listens for changes at a particular location (*path*) or a node below *path*. When changes are detected, the callback method will be invoked.
+Listens for changes at a particular location: *path* or a node below *path*. When changes are detected, the callback method will be invoked.
 
 The callback method takes two parameters: *path* and *data*. The *path* parameter returns the full path of the node that was modified (this allows you to determine if the root of the path you’re tracking changed, or if a node below it changed).
 
