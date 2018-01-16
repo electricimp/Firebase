@@ -1,8 +1,8 @@
-# Firebase v3.1.0
+# Firebase v3.1.1
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 
-**To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.1.0"` **to the top of your agent code.**
+**To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.1.1"` **to the top of your agent code.**
 
 [![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=master)](https://travis-ci.org/electricimp/Firebase)
 
@@ -128,7 +128,7 @@ firebase.on("/settings", function(path, data) {
 
 ### read(*path[, uriParams][, callback]*)
 
-Reads data from the specified path (ie. performs a GET request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code. 
+Reads data from the specified path (ie. performs a GET request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code.
 
 ```squirrel
 // Read all the settings:
