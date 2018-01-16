@@ -22,11 +22,13 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+
+const FB_KEEP_ALIVE_SEC               = 60; // Timeout for streaming
+const FB_DEFAULT_BACK_OFF_TIMEOUT_SEC = 60; // Backoff time
+
 class Firebase {
-    // Library version
-    static VERSION = "3.1.0";
-    static KEEP_ALIVE = 60;     // Timeout for streaming
-    static DEFAULT_BACK_OFF_TIMEOUT_SEC = 60; // Backoff time
+
+    static VERSION = "3.1.1";
 
     // Firebase
     _db = null;                 // The name of your firebase instance
@@ -47,13 +49,13 @@ class Firebase {
     _callbacks = null;          // List of _callbacks for streaming request
     _keepAliveTimer = null;     // Wakeup timer that watches for a dead Firebase socket
     _bufferedInput = null;      //  Buffer used for reading streamed data
-    
+
     // General
     _promiseIncluded = null;    // indicate if Promise library is included
     _backOffTimer = null;       // Timer used to backoff stream if FB is getting hammered
     _tooManyReqTimer = false;   // Timer used to reject requests if FB is getting hammered
     _tooManyReqCounter = 1;     // Counter used to backoff incoming request
-    
+
     /***************************************************************************
      * Constructor
      * Returns: FirebaseStream object
@@ -76,7 +78,7 @@ class Firebase {
         _callbacks = {};
 
         _promiseIncluded = ("Promise" in getroottable());
-        _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
+        _backOffTimer = FB_DEFAULT_BACK_OFF_TIMEOUT_SEC;
     }
 
     /***************************************************************************
@@ -109,7 +111,7 @@ class Firebase {
 
         // Tickle the keepalive timer
         if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
-        _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
+        _keepAliveTimer = imp.wakeup(FB_KEEP_ALIVE_SEC, _onKeepAliveExpiredFactory(path, onError));
 
         // Return true if we opened the stream
         return true;
@@ -191,7 +193,7 @@ class Firebase {
         }
         local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request,callback);
+        return _processResponse(request, callback);
     }
 
     /***************************************************************************
@@ -209,7 +211,7 @@ class Firebase {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
         local request = http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request,callback);
+        return _processResponse(request, callback);
 
     }
 
@@ -228,7 +230,7 @@ class Firebase {
     function write(path, data, callback = null) {
         local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request,callback);
+        return _processResponse(request, callback);
     }
 
     /***************************************************************************
@@ -247,7 +249,7 @@ class Firebase {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
         local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request,callback);
+        return _processResponse(request, callback);
 
     }
 
@@ -264,7 +266,7 @@ class Firebase {
     function remove(path, callback = null) {
         local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
         request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request,callback);
+        return _processResponse(request, callback);
     }
 
 
@@ -316,7 +318,7 @@ class Firebase {
             _streamingRequest = null;
             if (resp.statuscode == 307 && "location" in resp.headers) {
                 // Reset backoff timer
-                _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
+                _backOffTimer = FB_DEFAULT_BACK_OFF_TIMEOUT_SEC;
                 // set new location
                 local location = resp.headers["location"];
                 local p = location.find("." + _domain);
@@ -332,8 +334,8 @@ class Firebase {
                 _logError("Stream closed with error " + resp.statuscode);
 
                 // Invoke our error handler
-                imp.wakeup(0, function() { onError(resp); });
-                _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
+                onError(resp);
+                _backOffTimer = FB_DEFAULT_BACK_OFF_TIMEOUT_SEC;
             }
         }.bindenv(this);
     }
@@ -344,10 +346,10 @@ class Firebase {
         return function(messageString) {
             // Tickle the keep alive timer
             if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
-            _keepAliveTimer = imp.wakeup(KEEP_ALIVE, _onKeepAliveExpiredFactory(path, onError));
-            // We have received a resp from firebase, so set backoff timer to default 
-            _backOffTimer = DEFAULT_BACK_OFF_TIMEOUT_SEC;
-            
+            _keepAliveTimer = imp.wakeup(FB_KEEP_ALIVE_SEC, _onKeepAliveExpiredFactory(path, onError));
+            // We have received a resp from firebase, so set backoff timer to default
+            _backOffTimer = FB_DEFAULT_BACK_OFF_TIMEOUT_SEC;
+
             local messages = _parseEventMessage(messageString);
             foreach (message in messages) {
                 // Update the internal cache
@@ -355,33 +357,23 @@ class Firebase {
 
                 // Check out every callback for matching path
                 foreach (path, callback in _callbacks) {
-
                     if (path == "/" || path == message.path || message.path.find(path + "/") == 0) {
                         // This is an exact match or a subbranch
-
-                        // Create local instance of message for the callback
-                        local thisMessage = message;
-                        local thisCallback = callback;
-                        imp.wakeup(0, function() { thisCallback(thisMessage.path, thisMessage.data); }.bindenv(this));
+                        callback(message.path, message.data);
                     } else if (message.event == "patch") {
                         // This is a patch for a (potentially) parent node
                         foreach (head,body in message.data) {
-                            local newmessagepath = ((message.path == "/") ? "" : message.path) + "/" + head;
-                            if (newmessagepath == path) {
+                            local newMessagePath = ((message.path == "/") ? "" : message.path) + "/" + head;
+                            if (newMessagePath == path) {
                                 // We have found a superbranch that matches, rewrite this as a PUT
-                                local subdata = _getDataFromPath(newmessagepath, message.path, _data);
-                                local thisCallback = callback;
-                                imp.wakeup(0, function() { thisCallback(newmessagepath, subdata); }.bindenv(this));
+                                local subdata = _getDataFromPath(newMessagePath, message.path, _data);
+                                callback(newMessagePath, subdata);
                             }
                         }
                     } else if (message.path == "/" || path.find(message.path + "/") == 0) {
                         // This is the root or a superbranch for a put or delete
                         local subdata = _getDataFromPath(path, message.path, _data);
-
-                        // Create local instance of path and callback
-                        local thisPath = path;
-                        local thisCallback = callback;
-                        imp.wakeup(0, function() { thisCallback(thisPath, subdata); }.bindenv(this));
+                        callback(path, subdata);
                     }
                 }
             }
@@ -661,11 +653,11 @@ class Firebase {
                     // Too many requests, set _tooManyReqTimer to prevent more requests to FB
                     if (_tooManyReqTimer == false) {
                         // This is the first 429 we have seen set a default timeout
-                        _tooManyReqTimer = now + DEFAULT_BACK_OFF_TIMEOUT_SEC;
+                        _tooManyReqTimer = now + FB_DEFAULT_BACK_OFF_TIMEOUT_SEC;
                     } else if (_tooManyReqTimer <= now) {
-                        // Firebase is still overwhelmed after first timeout expired, 
+                        // Firebase is still overwhelmed after first timeout expired,
                         // Let's block requests for longer to let FB recover
-                        _tooManyReqTimer = now + (DEFAULT_BACK_OFF_TIMEOUT_SEC * _tooManyReqCounter++);
+                        _tooManyReqTimer = now + (FB_DEFAULT_BACK_OFF_TIMEOUT_SEC * _tooManyReqCounter++);
                     }
                     // Pass error to callback
                     onError("Error " + res.statuscode);
@@ -697,11 +689,8 @@ class Firebase {
             if (usePromise) {
                 return Promise.reject(error);
             } else {
-                imp.wakeup(0, function() {
-                    callback(error, null);
-                }.bindenv(this))
+                callback(error, null);
             }
         }
     }
-
 }
