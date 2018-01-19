@@ -1,8 +1,8 @@
-# Firebase v3.0.0
+# Firebase v3.1.1
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 
-**To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.0.0"` **to the top of your agent code.**
+**To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.1.1"` **to the top of your agent code.**
 
 [![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=master)](https://travis-ci.org/electricimp/Firebase)
 
@@ -10,7 +10,7 @@ The Firebase library allows you to easily integrate your agent code with Firebas
 
 ### Optional Callbacks/Promises
 
-The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *response*. If no error is encountered, the error parameter will be `null`.
+The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *response*. If no error is encountered, *error* will be `null`. If Firebase returns a 429 error the library will now prevent further requests from being processed for at least 60 seconds, and an error will be passed to the callback’s *error* parameter.
 
 As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
@@ -20,14 +20,14 @@ As an alternative to passing in a callback, you can include the Electric Imp Pro
 
 The Firebase class must be instantiated with an instance name, and optionally an authorization Key, a custom Firebase domain and a debug flag.
 
-| Parameter | Type   | Default            | Notes    |
-| --------- | ------ | ------------------ | -------- |
-| *instance*  | String | n/a                |          |
-| *auth*      | String | `null` (no authorization) | Optional |
-| *domain*    | String | `"firebaseio.com"`  | Optional |
-| *debug*    | Boolean   | `true`             | Optional. Set to `false` to supress error logging within<br>the Firebase class |
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| *instance* | String | n/a | |
+| *auth* | String | `null` (no authorization) | Optional |
+| *domain* | String | `"firebaseio.com"` | Optional |
+| *debug* | Boolean | `true` | Optional. Set to `false` to supress error logging within the Firebase class |
 
-The domain and instance are used to construct the url requests are made against in the following was: `https://{instance}.{domain}`.
+The domain and instance are used to construct the URL that requests are made against in the following way: `https://{instance}.{domain}`.
 
 ```squirrel
 const FIREBASE_NAME = "<YOUR_FIREBASE_NAME>";
@@ -40,7 +40,7 @@ firebase <- Firebase(FIREBASE_NAME, FIREBASE_AUTH_KEY);
 
 ### on(*path, callback*)
 
-Listens for changes at a particular location (*path*) or a node below *path*. When changes are detected, the callback method will be invoked.
+Listens for changes at a particular location: *path* or a node below *path*. When changes are detected, the callback method will be invoked.
 
 The callback method takes two parameters: *path* and *data*. The *path* parameter returns the full path of the node that was modified (this allows you to determine if the root of the path you’re tracking changed, or if a node below it changed).
 
@@ -80,7 +80,7 @@ Creates a streaming request using the *path* as the base address to track. If no
 
 An optional table of *uriParams* can be supplied in order to use Firebase queries.
 
-An optional *onErrorCallback* parameter can be supplied that will be invoked if errors occur while making streaming requests. If no *onErrorCallback* is supplied, the Firebase class will attempt to silently and automatically reconnect when it encounters an error. If an *onErrorCallback* is supplied, it is up to the developer to re-initiate the *stream()* request in the callback.
+An optional *onErrorCallback* parameter can be supplied that will be invoked if errors occur while making streaming requests. The Firebase class will attempt to silently and automatically reconnect when it encounters a 429 or 503 status code error. For all other errors, if an *onErrorCallback* is supplied, it is up to the developer to re-initiate the *stream()* request in the callback.
 
 The *onErrorCallback* takes a single parameter: the [HTTP Response Table](https://electricimp.com/docs/api/httprequest/sendasync/) from the request.
 
