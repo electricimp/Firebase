@@ -82,7 +82,7 @@ An optional table of *uriParams* can be supplied in order to use Firebase querie
 
 An optional *onErrorCallback* parameter can be supplied that will be invoked if errors occur while making streaming requests. The Firebase class will attempt to silently and automatically reconnect when it encounters a 429 or 503 status code error. For all other errors, if an *onErrorCallback* is supplied, it is up to the developer to re-initiate the *stream()* request in the callback.
 
-The *onErrorCallback* takes a single parameter: the [HTTP Response Table](https://electricimp.com/docs/api/httprequest/sendasync/) from the request.
+The *onErrorCallback* takes a single parameter: the [HTTP Response Table](https://developer.electricimp.com/api/httprequest/sendasync/) from the request.
 
 ```squirrel
 // Setup onError handler
