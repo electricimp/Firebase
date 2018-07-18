@@ -60,8 +60,13 @@ class Firebase {
      * Constructor
      * Returns: FirebaseStream object
      * Parameters:
-     *      _baseUrl - the base URL to your Firebase (https://username.firebaseio.com)
-     *      _auth - the _auth token for your Firebase
+     *      db      - the name of the Firesbase instance
+     *      auth    - an optional authentication token
+     *      domain  - base domain name for the Firebase instance.
+     *                  Defaults to "firebaseio.com". Is used to build
+     *                  the base Firebase database URL, for example:
+     *                  https://username.firebaseio.com
+     *      debug   - turns the debug logs on or off, true by default
      **************************************************************************/
     constructor(db, auth = null, domain = "firebaseio.com", debug = true) {
         _debug = debug;
