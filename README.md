@@ -1,6 +1,7 @@
 # Firebase v3.1.2
 
-The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
+The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend,
+which includes data storage, user authentication, static hosting and more.
 
 **To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.1.2"` **to the top of your agent code.**
 
@@ -10,24 +11,32 @@ The Firebase library allows you to easily integrate your agent code with Firebas
 
 ### Optional Callbacks/Promises
 
-The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *response*. If no error is encountered, *error* will be `null`. If Firebase returns a 429 error the library will now prevent further requests from being processed for at least 60 seconds, and an error will be passed to the callback’s *error* parameter.
+The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter.
+If a callback function is provided, it will be called when the response from Firebase is received. The callback
+takes two required parameters: *error* and *response*. If no error is encountered, *error* will be `null`.
+If Firebase returns a 429 error the library will now prevent further requests from being processed for at least
+60 seconds, and an error will be passed to the callback’s *error* parameter.
 
-As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
+As an alternative to passing in a callback, you can include the Electric Imp Promise library
+[GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods
+*read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
 **To add Promise library to your project, add** `#require "promise.class.nut:3.0.0"` **to the top of your agent code.**
 
 ### Constructor: Firebase(*instance[, authKey][, domain][, debug]*)
 
-The Firebase class must be instantiated with an instance name, and optionally an authorization Key, a custom Firebase domain and a debug flag.
+The Firebase class must be instantiated with an instance name, and optionally an authorization Key,
+a custom Firebase domain and a debug flag.
 
 | Parameter | Type | Default | Notes |
 | --- | --- | --- | --- |
-| *instance* | String | n/a | |
-| *auth* | String | `null` (no authorization) | Optional |
-| *domain* | String | `"firebaseio.com"` | Optional |
-| *debug* | Boolean | `true` | Optional. Set to `false` to supress error logging within the Firebase class |
+| *instance* | String | n/a | The name of your firebase instance. |
+| *auth* | String | `null` (no authorization) | An optional authentication key (if auth is enabled). |
+| *domain* | String | `"firebaseio.com"` | Optional. Base domain name for the Firebase instance. Defaults to "firebaseio.com". Is used to build the base Firebase database URL, for example: https://username.firebaseio.com |
+| *debug* | Boolean | `true` | Optional, `true` by default. Set to `false` to supress error logging within the Firebase class |
 
-The domain and instance are used to construct the URL that requests are made against in the following way: `https://{instance}.{domain}`.
+The domain and instance are used to construct the URL that requests are made against in the following way:
+`https://{instance}.{domain}`.
 
 ```squirrel
 const FIREBASE_NAME = "<YOUR_FIREBASE_NAME>";
@@ -40,9 +49,12 @@ firebase <- Firebase(FIREBASE_NAME, FIREBASE_AUTH_KEY);
 
 ### on(*path, callback*)
 
-Listens for changes at a particular location: *path* or a node below *path*. When changes are detected, the callback method will be invoked.
+Listens for changes at a particular location: *path* or a node below *path*. When changes are detected,
+the callback method will be invoked.
 
-The callback method takes two parameters: *path* and *data*. The *path* parameter returns the full path of the node that was modified (this allows you to determine if the root of the path you’re tracking changed, or if a node below it changed).
+The callback method takes two parameters: *path* and *data*. The *path* parameter returns the full path
+of the node that was modified (this allows you to determine if the root of the path you’re tracking
+changed, or if a node below it changed).
 
 The *data* parameter contains the modified data.
 
@@ -78,7 +90,7 @@ firebase.stream();
 
 Creates a streaming request using the *path* as the base address to track. If no *path* is supplied, the root of the instance (`"/"`) will be used.
 
-An optional table of *uriParams* can be supplied in order to use Firebase queries.
+An optional key-value table of *uriParams* can be supplied in order to use Firebase queries.
 
 An optional *onErrorCallback* parameter can be supplied that will be invoked if errors occur while making streaming requests. The Firebase class will attempt to silently and automatically reconnect when it encounters a 429 or 503 status code error. For all other errors, if an *onErrorCallback* is supplied, it is up to the developer to re-initiate the *stream()* request in the callback.
 
@@ -130,6 +142,9 @@ firebase.on("/settings", function(path, data) {
 
 Reads data from the specified path (ie. performs a GET request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code.
 
+The callback takes two parameters. The first parameter is `error` string, which describes the error occurred. If the call succeeded, `error` is `null`. The second parameter is `data`, an object represending the Firebase resosponse,
+which is null in case of an error occurred.
+
 ```squirrel
 // Read all the settings:
 firebase.read("/settings", function(error, data) {
@@ -169,6 +184,9 @@ fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff
 
 Updates data at the specified path (ie. performs a PUT request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code.
 
+The callback takes two parameters. The first parameter is `error` string, which describes the error occurred. If the call succeeded, `error` is `null`. The second parameter is `data`, an object represending the Firebase resosponse,
+which is null in case of an error occurred.
+
 ```squirrel
 // When we get a new state
 device.on("newState", function(state) {
@@ -190,6 +208,9 @@ device.on("newState", function(state) {
 
 Updates a subset of data at a particular path (ie. performs a PATCH request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code.
 
+The callback takes two parameters. The first parameter is `error` string, which describes the error occurred. If the call succeeded, `error` is `null`. The second parameter is `data`, an object represending the Firebase resosponse,
+which is null in case of an error occurred.
+
 ```squirrel
 device.on("newLocation", function(location) {
     // Update the location in the settings:
@@ -206,6 +227,14 @@ device.on("newLocation", function(location) {
 ### push(*path, data[, priority][, callback]*)
 
 Pushes data to the specified path (ie. performs a POST request). This function should be used when you’re adding an item to a list. Returns a Promise when the callback is not provided and the Promise library is included in your agent code.
+
+The callback takes two parameters. The first parameter is `error` string, which describes the error occurred. If the call succeeded, `error` is `null`. The second parameter is `data`, an object represending the Firebase resosponse,
+which is null in case of an error occurred.
+
+`priority` is an optional (numeric or alphanumeric) value of each node, which is used to sort the children under a specific parent or in a query if no other sort condition is specified.
+
+The callback takes two parameters. The first parameter is `error` string, which describes the error occurred. If the call succeeded, `error` is `null`. The second parameter is `data`, an object represending the Firebase resosponse,
+which is null in case of an error occurred.
 
 ```squirrel
 // Example using a promise instead of callback function
@@ -235,6 +264,9 @@ device.on("temps", function(data) {
 ### remove(*path[, callback]*)
 
 Deletes data at the specified path (ie. performs a DELETE request). Returns a Promise when the callback is not provided and the Promise library is included in your agent code.
+
+The callback takes two parameters. The first parameter is `error` string, which describes the error occurred. If the call succeeded, `error` is `null`. The second parameter is `data`, an object represending the Firebase resosponse,
+which is null in case of an error occurred.
 
 ```squirrel
 // If the user opts out of tracking:
