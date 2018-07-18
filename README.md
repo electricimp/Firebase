@@ -138,7 +138,7 @@ firebase.on("/settings", function(path, data) {
 
 ### read(*path[, uriParams][, callback]*) ###
 
-This method reads data from the specified path (ie. performs a GET request). 
+This method reads data from the specified path (ie. performs a GET request).
 
 Any function passed into *callback* should have two parameters of its own. The first, *error*, receives a string which will describe an error if one occurred. If the call succeeded, *error* is `null`. The second parameter, *data*, will be an object represending the Firebase resosponse. It will be `null` if an error occurred.
 
@@ -183,7 +183,7 @@ fbDino.read("/dinosaurs", {"orderBy": "$key", "startAt": "b", "endAt": @"b\uf8ff
 
 ### write(*path, data[, callback]*) ###
 
-This method updates data at the specified path (ie. performs a PUT request). 
+This method updates data at the specified path (ie. performs a PUT request).
 
 Any function passed into *callback* should have two parameters of its own. The first, *error*, receives a string which will describe an error if one occurred. If the call succeeded, *error* is `null`. The second parameter, *data*, will be an object represending the Firebase resosponse. It will be `null` if an error occurred.
 
@@ -210,7 +210,7 @@ device.on("newState", function(state) {
 
 ### update(*path, data[, callback]*) ###
 
-This method updates a subset of data at a particular path (ie. performs a PATCH request). 
+This method updates a subset of data at a particular path (ie. performs a PATCH request).
 
 Any function passed into *callback* should have two parameters of its own. The first, *error*, receives a string which will describe an error if one occurred. If the call succeeded, *error* is `null`. The second parameter, *data*, will be an object represending the Firebase resosponse. It will be `null` if an error occurred.
 
@@ -233,7 +233,7 @@ device.on("newLocation", function(location) {
 
 ### push(*path, data[, priority][, callback]*) ###
 
-This method pushes data to the specified path (ie. performs a POST request). It should be used when you’re adding an item to a list. 
+This method pushes data to the specified path (ie. performs a POST request). It should be used when you’re adding an item to a list.
 
 The parameter *priority* is an optional (numeric or alphanumeric) value of each node. It is used to sort the children under a specific parent, or in a query if no other sort condition is specified.
 
@@ -268,7 +268,7 @@ device.on("temps", function(data) {
 
 ### remove(*path[, callback]*) ###
 
-This method deletes data at the specified path (ie. performs a DELETE request). 
+This method deletes data at the specified path (ie. performs a DELETE request).
 
 Any function passed into *callback* should have two parameters of its own. The first, *error*, receives a string which will describe an error if one occurred. If the call succeeded, *error* is `null`. The second parameter, *data*, will be an object represending the Firebase resosponse. It will be `null` if an error occurred.
 
