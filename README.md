@@ -27,8 +27,7 @@ The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an 
 
 As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
-**To add Promise library to your project, add** `#require "promise.class.nut:3.0.0"` **to the top of your agent code.**
-TODO - should we update the version to 4.0.0 ?
+**To add Promise library to your project, add** `#require "Promise.lib.nut:4.0.0"` **to the top of your agent code.**
 
 ### Constructor: Firebase(*instanceName[, authKey][, domain][, debug]*) ###
 
@@ -76,7 +75,23 @@ If a not supported value is passed to the *type* parameter or the *provider* par
 #### Example ####
 
 ```squirrel
-TODO
+#require "Firebase.agent.lib.nut:3.2.0"
+#require "OAuth2.agent.lib.nut:2.0.1"
+
+const FIREBASE_NAME = "YOUR_FIREBASE_NAME";
+const FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL = "YOUR_FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL";
+const FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY = "YOUR_FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY";
+
+firebase <- Firebase(FIREBASE_NAME);
+firebase.setAuthProvider(
+    FIREBASE_AUTH_TYPE.OAUTH2_TOKEN,
+    OAuth2.JWTProfile.Client(
+        OAuth2.DeviceFlow.GOOGLE,
+        {
+            "iss"         : FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL,
+            "jwtSignKey"  : FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY,
+            "scope"       : "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/firebase.database"
+        }));
 ```
 
 ### on(*path, callback*) ##

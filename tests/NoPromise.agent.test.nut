@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright 2017 Electric Imp
+// Copyright 2017-2018 Electric Imp
 //
 // SPDX-License-Identifier: MIT
 //
@@ -21,6 +21,8 @@
 // OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
+@include "./tests/AuthProviders.agent.nut"
 
 const FIREBASE_AUTH_KEY = "@{FIREBASE_AUTH_KEY}";
 const FIREBASE_INSTANCE_NAME = "@{FIREBASE_INSTANCE_NAME}";
@@ -53,7 +55,8 @@ class NoPromiseTestCase extends ImpTestCase {
 
         return _myPromise(function (ok, err) { 
             this._firebase.write(this._path, this._luckyNum);
-            imp.sleep(1); // let the writing go through
+            imp.sleep(3); // let the writing go through
+            getroottable()["Promise"] <- _myPromise;
             this._firebase.read(this._path, function (error, data) {
                 if (error) {
                     err(error);
@@ -82,5 +85,21 @@ class NoPromiseTestCase extends ImpTestCase {
                 }
             }.bindenv(this));
         }.bindenv(this));
+    }
+}
+
+class NoPromiseOAuth2TestCase extends NoPromiseTestCase {
+    function setUp() {
+        base.setUp();
+        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
+    }
+}
+
+class NoPromiseFirebaseIdAuthTestCase extends NoPromiseTestCase {
+    function setUp() {
+        base.setUp();
+        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
     }
 }
