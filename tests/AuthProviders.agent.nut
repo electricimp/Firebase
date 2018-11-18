@@ -24,8 +24,8 @@
 
 @include "https://raw.githubusercontent.com/electricimp/OAuth-2.0/master/OAuth2.agent.lib.nut"
 
-const FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL = "@{FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL}";
-const FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY = "@{FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY}";
+const FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL = "@{FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL}";
+const FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY = "@{FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY}";
 const FIREBASE_WEB_API_KEY = "@{FIREBASE_WEB_API_KEY}";
 
 // Example of Firebase ID tokens provider for anonymous user.
@@ -120,7 +120,7 @@ firebaseIdTokenProvider <- FirebaseIdTokenProvider(FIREBASE_WEB_API_KEY);
 oAuth2TokenProvider <- OAuth2.JWTProfile.Client(
     OAuth2.DeviceFlow.GOOGLE,
     {
-        "iss"         : FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL,
-        "jwtSignKey"  : FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY,
+        "iss"         : FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
+        "jwtSignKey"  : FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY,
         "scope"       : "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/firebase.database"
     });

@@ -40,7 +40,7 @@ It looks something like this:
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mtv6g%40test-1dd6f.iam.gserviceaccount.com"
 }
 ```
-Copy `client_email` and `private_key` fields values from the downloaded JSON file &mdash; they will be used as the *FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL* and *FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY* environment variables.
+Copy `client_email` and `private_key` fields values from the downloaded JSON file &mdash; they will be used as the *FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL* and *FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY* environment variables.
 - Click ‘Database secrets’.
 - Click ‘Show’ near your database secret and copy the secret &mdash; it will be used as the *FIREBASE_AUTH_KEY* environment variable.
 ![Project settings](../png/DatabaseSecret.png)
@@ -55,7 +55,7 @@ Copy `client_email` and `private_key` fields values from the downloaded JSON fil
 
 ## Set Environment Variables ##
 
-- Set *FIREBASE_INSTANCE_NAME*, *FIREBASE_WEB_API_KEY*, *FIREBASE_AUTH_KEY*, *FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL*, *FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY* environment variables to the values you retrieved in the previous steps.
+- Set *FIREBASE_INSTANCE_NAME*, *FIREBASE_WEB_API_KEY*, *FIREBASE_AUTH_KEY*, *FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL*, *FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY* environment variables to the values you retrieved in the previous steps.
 - For integration with [Travis](https://travis-ci.org) set *EI_LOGIN_KEY* environment variable to the valid impCentral login key.
 
 ## Run Tests ##

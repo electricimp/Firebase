@@ -79,8 +79,8 @@ If a not supported value is passed to the *type* parameter or the *provider* par
 #require "OAuth2.agent.lib.nut:2.0.1"
 
 const FIREBASE_NAME = "YOUR_FIREBASE_NAME";
-const FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL = "YOUR_FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL";
-const FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY = "YOUR_FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY";
+const FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL = "YOUR_FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL";
+const FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY = "YOUR_FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY";
 
 firebase <- Firebase(FIREBASE_NAME);
 firebase.setAuthProvider(
@@ -88,8 +88,8 @@ firebase.setAuthProvider(
     OAuth2.JWTProfile.Client(
         OAuth2.DeviceFlow.GOOGLE,
         {
-            "iss"         : FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL,
-            "jwtSignKey"  : FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY,
+            "iss"         : FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
+            "jwtSignKey"  : FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY,
             "scope"       : "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/firebase.database"
         }));
 ```

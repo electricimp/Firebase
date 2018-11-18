@@ -68,15 +68,15 @@ class DataReader {
 // FIREBASE CONSTANTS
 // ----------------------------------------------------------
 const FIREBASE_PROJECT_ID = "<YOUR_FIREBASE_PROJECT_ID>";
-const FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL = "<YOUR_FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL>";
-const FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY = "<YOUR_FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY>";
+const FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL = "<YOUR_FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL>";
+const FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY = "<YOUR_FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY>";
 
 // obtaining Google OAuth2 access tokens provider
 local oAuth2TokenProvider = OAuth2.JWTProfile.Client(
     OAuth2.DeviceFlow.GOOGLE,
     {
-        "iss"         : FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL,
-        "jwtSignKey"  : FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY,
+        "iss"         : FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
+        "jwtSignKey"  : FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY,
         "scope"       : "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/firebase.database"
     });
 

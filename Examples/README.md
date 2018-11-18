@@ -107,7 +107,7 @@ It looks something like this:
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mtv6g%40test-1dd6f.iam.gserviceaccount.com"
 }
 ```
-Copy `client_email` and `private_key` fields values from the downloaded JSON file &mdash; they will be used as the *FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL* and *FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY* constants in the agent code.
+Copy `client_email` and `private_key` fields values from the downloaded JSON file &mdash; they will be used as the *FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL* and *FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY* constants in the agent code.
 
 ### Additional Setup for the StreamReader Example
 - In the [Firebase Console](https://console.firebase.google.com) select the project you created in the previous steps.
@@ -122,5 +122,5 @@ Copy your project’s Web API Key &mdash; it will be used as the *FIREBASE_WEB_A
 
 #### Constants Setup
 
-Set the example code configuration constants (*FIREBASE_PROJECT_ID*, *FIREBASE_SECRET*, *FIREBASE_SERIVCE_ACCOUNT_CLIENT_EMAIL*, *FIREBASE_SERIVCE_ACCOUNT_PRIVATE_KEY*, *FIREBASE_WEB_API_KEY* depending on the example) with the values retrieved in the previous steps. Set the same value of *FIREBASE_PROJECT_ID* for all examples.
+Set the example code configuration constants (*FIREBASE_PROJECT_ID*, *FIREBASE_SECRET*, *FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL*, *FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY*, *FIREBASE_WEB_API_KEY* depending on the example) with the values retrieved in the previous steps. Set the same value of *FIREBASE_PROJECT_ID* for all examples.
 ![Examples config](../png/ExampleConfig.png)
