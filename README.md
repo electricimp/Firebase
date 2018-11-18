@@ -19,7 +19,7 @@ By default, the library is setup for the *Legacy tokens* authentication which ma
 
 At any time, the current type of authentication may be changed by calling the *setAuthProvider()* method. See the method's description for more details.
 
-Full working examples for each type of authentication are provided in the [examples](./examples) directory.
+Full working examples for each type of authentication are provided in the [Examples](./Examples) directory.
 
 ### Optional Callbacks And Promises ###
 
@@ -341,7 +341,7 @@ device.on("no-tracking", function(data) {
 
 ## Examples ##
 
-Full working examples are provided in the [examples](./examples) directory.
+Full working examples are provided in the [Examples](./Examples) directory.
 
 ## Testing ##
 
