@@ -1,12 +1,25 @@
-# Firebase 3.1.2 #
+# Firebase 3.2.0 #
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 
-**To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.1.2"` **to the top of your agent code.**
+**To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.2.0"` **to the top of your agent code.**
 
 [![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=master)](https://travis-ci.org/electricimp/Firebase)
 
 ## Class Usage ##
+
+### Authentication ###
+
+Firebase supports three types of [authentication](https://firebase.google.com/docs/database/rest/auth):
+- [Google OAuth2 access tokens](https://firebase.google.com/docs/database/rest/auth#google_oauth2_access_tokens),
+- [Firebase ID tokens](https://firebase.google.com/docs/database/rest/auth#firebase_id_tokens),
+- [Legacy tokens](https://firebase.google.com/docs/database/rest/auth#legacy_tokens).
+
+By default, the library is setup for the *Legacy tokens* authentication which may be initialized by the *authKey* parameter in the library class's constructor. Set this parameter to `null` if you plan to use another authentication type.
+
+At any time, the current type of authentication may be changed by calling the *setAuthProvider()* method. See the method's description for more details.
+
+Full working examples for each type of authentication are provided in the [examples](./examples) directory.
 
 ### Optional Callbacks And Promises ###
 
@@ -15,6 +28,7 @@ The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an 
 As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
 **To add Promise library to your project, add** `#require "promise.class.nut:3.0.0"` **to the top of your agent code.**
+TODO - should we update the version to 4.0.0 ?
 
 ### Constructor: Firebase(*instanceName[, authKey][, domain][, debug]*) ###
 
@@ -31,8 +45,12 @@ The Firebase class must be instantiated with an instance name, and optionally an
 
 The domain and instance are used to construct the URL that requests are made against in the following way: `https://{instance}.{domain}`.
 
+The constructor setups the *Legacy tokens* authentication. If you plan to use another type of authentication, pass `null` as the *authKey* parameter and call the *setAuthProvider()* method after the constructor.
+
+#### Example ####
+
 ```squirrel
-#require "Firebase.agent.lib.nut:3.1.2"
+#require "Firebase.agent.lib.nut:3.2.0"
 
 const FIREBASE_NAME = "YOUR_FIREBASE_NAME";
 const FIREBASE_AUTH_KEY = "YOUR_FIREBASE_AUTH_KEY";
@@ -41,6 +59,25 @@ firebase <- Firebase(FIREBASE_NAME, FIREBASE_AUTH_KEY);
 ```
 
 ## Class Methods ##
+
+### setAuthProvider(*type[, provider]*) ###
+
+This method changes a type of authentication used by the library to work with the Firebase backend. The method has two parameters.
+
+The mandatory *type* parameter &mdash; a type of authentication. It must be one of the following values of the *FIREBASE_AUTH_TYPE* enum:
+- *LEGACY_TOKEN* &mdash; [Legacy tokens authentication](https://firebase.google.com/docs/database/rest/auth#legacy_tokens). It is initialized by the *authKey* parameter in the library class's constructor.
+- *OAUTH2_TOKEN* &mdash; [Google OAuth2 access tokens authentication](https://firebase.google.com/docs/database/rest/auth#google_oauth2_access_tokens). An external provider of access tokens must be used and passed to the library via the *provider* parameter. Electric Imp’s [OAuth2.JWTProfile.Client library](https://github.com/electricimp/OAuth-2.0) may be used as the provider.
+- *FIREBASE_ID_TOKEN* &mdash; [Firebase ID tokens authentication](https://firebase.google.com/docs/database/rest/auth#firebase_id_tokens). An external provider of access tokens must be used and passed to the library via the *provider* parameter.
+
+The optional *provider* parameter &mdash; an external provider of access tokens. The provider must contain an *acquireAccessToken()* method that takes one required parameter: a handler that is called when an access token is acquired or an error occurs. The handler itself has two required parameters: *token* &mdash; a string representation of the access token, and *error* &mdash; a string with error details (or `null` if no error occurred).
+
+If a not supported value is passed to the *type* parameter or the *provider* parameter is `null` (irrespective of the *type* parameter value), the authentication type is changed to the *LEGACY_TOKEN*.
+
+#### Example ####
+
+```squirrel
+TODO
+```
 
 ### on(*path, callback*) ##
 
@@ -286,6 +323,14 @@ device.on("no-tracking", function(data) {
   });
 });
 ```
+
+## Examples ##
+
+Full working examples are provided in the [examples](./examples) directory.
+
+## Testing ##
+
+Tests for the library are provided in the [tests](./tests) directory.
 
 ## License ##
 
