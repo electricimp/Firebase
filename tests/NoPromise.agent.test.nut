@@ -55,20 +55,22 @@ class NoPromiseTestCase extends ImpTestCase {
 
         return _myPromise(function (ok, err) { 
             this._firebase.write(this._path, this._luckyNum);
-            imp.sleep(3); // let the writing go through
             getroottable()["Promise"] <- _myPromise;
-            this._firebase.read(this._path, function (error, data) {
-                if (error) {
-                    err(error);
-                } else {
-                    try {
-                        this.assertEqual(this._luckyNum, data);
-                        ok("Read test data at \""+ this._path + "\"");
-                    } catch (e) {
-                        err(e);
-                    }
-                }
-            }.bindenv(this));
+            imp.wakeup(3, // let the writing go through
+                function () {
+                    this._firebase.read(this._path, function (error, data) {
+                        if (error) {
+                            err(error);
+                        } else {
+                            try {
+                                this.assertEqual(this._luckyNum, data);
+                                ok("Read test data at \""+ this._path + "\"");
+                            } catch (e) {
+                                err(e);
+                            }
+                        }
+                    }.bindenv(this));
+                }.bindenv(this));
         }.bindenv(this));
     }
 
