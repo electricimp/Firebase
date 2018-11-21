@@ -76,14 +76,14 @@ class QueriesTestCase extends ImpTestCase {
     };
 
     function setUp() {
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-queries";
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
+        _path = this.session + "-queries";
         // add indexes
         local rules = {"rules": {".write": true, ".read": true}};
-        rules.rules[this._path] <- {".write": true, ".read": true, ".indexOn": ["height", "weight", "length"]};
+        rules.rules[_path] <- {".write": true, ".read": true, ".indexOn": ["height", "weight", "length"]};
 
         return Promise(function (ok, err) {
-            this._firebase.write(".settings/rules",
+            _firebase.write(".settings/rules",
                 rules,
                 function (error, res) {
                     if (error) {
@@ -100,13 +100,13 @@ class QueriesTestCase extends ImpTestCase {
      */
     function test01_write() {
         return Promise(function (ok, err) {
-            this._firebase.write(this._path, this._dinos, function (error, response) {
+            _firebase.write(_path, _dinos, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
                     try {
-                        this.assertDeepEqual(this._dinos, response);
-                        ok("Written test data at \""+ this._path + "\"");
+                        this.assertDeepEqual(_dinos, response);
+                        ok("Written test data at \""+ _path + "\"");
                     } catch (e) {
                         err(e);
                     }
@@ -120,7 +120,7 @@ class QueriesTestCase extends ImpTestCase {
      */
     function test02_readKeys() {
         return Promise(function (ok, err) {
-            this._firebase.read(this._path, {"shallow": true}, function (error, data) {
+            _firebase.read(_path, {"shallow": true}, function (error, data) {
                 if (error) {
                     err(error);
                 } else {
@@ -142,11 +142,11 @@ class QueriesTestCase extends ImpTestCase {
      */
     function tearDown() {
         return Promise(function (ok, err) {
-            this._firebase.remove(this._path, function (error, response) {
+            _firebase.remove(_path, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
-                    ok("Removed test data at \""+ this._path + "\"");
+                    ok("Removed test data at \""+ _path + "\"");
                 }
             }.bindenv(this));
         }.bindenv(this))
@@ -156,15 +156,15 @@ class QueriesTestCase extends ImpTestCase {
 class QueriesOAuth2TestCase extends QueriesTestCase {
     function setUp() {
         base.setUp();
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
-        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
     }
 }
 
 class QueriesFirebaseIdAuthTestCase extends QueriesTestCase {
     function setUp() {
         base.setUp();
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
-        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
     }
 }

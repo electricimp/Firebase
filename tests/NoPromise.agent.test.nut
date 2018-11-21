@@ -42,9 +42,9 @@ class NoPromiseTestCase extends ImpTestCase {
         if ("Promise" in rt) {
             _myPromise = delete rt.Promise; 
         }
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-nopromise";
-        this._luckyNum = math.rand() + "" + math.rand();
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
+        _path = this.session + "-nopromise";
+        _luckyNum = math.rand() + "" + math.rand();
         return "Firebase instance \"" + FIREBASE_INSTANCE_NAME + "\" created";
     }
 
@@ -54,17 +54,17 @@ class NoPromiseTestCase extends ImpTestCase {
     function test01_write() {
 
         return _myPromise(function (ok, err) { 
-            this._firebase.write(this._path, this._luckyNum);
+            _firebase.write(_path, _luckyNum);
             getroottable()["Promise"] <- _myPromise;
             imp.wakeup(3, // let the writing go through
                 function () {
-                    this._firebase.read(this._path, function (error, data) {
+                    _firebase.read(_path, function (error, data) {
                         if (error) {
                             err(error);
                         } else {
                             try {
-                                this.assertEqual(this._luckyNum, data);
-                                ok("Read test data at \""+ this._path + "\"");
+                                this.assertEqual(_luckyNum, data);
+                                ok("Read test data at \""+ _path + "\"");
                             } catch (e) {
                                 err(e);
                             }
@@ -79,11 +79,11 @@ class NoPromiseTestCase extends ImpTestCase {
      */
     function tearDown() {
         return _myPromise(function (ok, err) { 
-            this._firebase.remove(this._path, function (error, response) {
+            _firebase.remove(_path, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
-                    ok("Removed test data at \""+ this._path + "\"");
+                    ok("Removed test data at \""+ _path + "\"");
                 }
             }.bindenv(this));
         }.bindenv(this));
@@ -93,15 +93,15 @@ class NoPromiseTestCase extends ImpTestCase {
 class NoPromiseOAuth2TestCase extends NoPromiseTestCase {
     function setUp() {
         base.setUp();
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
-        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
     }
 }
 
 class NoPromiseFirebaseIdAuthTestCase extends NoPromiseTestCase {
     function setUp() {
         base.setUp();
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
-        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
     }
 }

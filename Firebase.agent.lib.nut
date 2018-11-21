@@ -70,7 +70,7 @@ class Firebase {
 
     /***************************************************************************
      * Constructor
-     * Returns: FirebaseStream object
+     * Returns: Firebase object
      * Parameters:
      *      db      - the name of the Firesbase instance
      *      auth    - an optional authentication token
@@ -241,12 +241,17 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're reading
      *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
-     *      callback - a callback function with one parameter (data) to be
-     *                 executed once the data is read
+     *      callback - a callback function to be executed once the data is read.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
      function read(path, uriParams = null, callback = null) {
         if (typeof uriParams == "function") {
@@ -262,10 +267,20 @@ class Firebase {
      *
      * NOTE: This function does NOT update firebase._data
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're pushing to
      *      data     - the data we're pushing
+     *      priority - optional numeric or alphanumeric value of each node.
+     *                 It is used to sort the children under a specific parent,
+     *                 or in a query if no other sort condition is specified.
+     *      callback - a callback function to be executed once the data is pushed.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function push(path, data, priority = null, callback = null) {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
@@ -279,10 +294,17 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're writing to
      *      data     - the data we're writing
+     *      callback - a callback function to be executed once the data is written.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function write(path, data, callback = null) {
         return _processRequest("PUT", path, null, _defaultHeaders, http.jsonencode(data), callback);
@@ -295,10 +317,17 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're patching
      *      data     - the data we're patching
+     *      callback - a callback function to be executed once the data is updated.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function update(path, data, callback = null) {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
@@ -311,9 +340,16 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're deleting
+     *      callback - a callback function to be executed once the data is updated.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function remove(path, callback = null) {
         return _processRequest("DELETE", path, null, _defaultHeaders, null, callback);
@@ -748,14 +784,13 @@ class Firebase {
                     _createAndSendRequest(method, path, uriParams, headers, body, resolve, reject);
                 }.bindenv(this));
             } else {
-                _createAndSendRequest(
-                    method, path, uriParams, headers, body,
-                    function (data) {
-                        callback && callback(null, data);
-                    },
-                    function (err) {
-                        callback && callback(err, null);
-                    });
+                local onSuccess = function (data) {
+                    callback && callback(null, data);
+                };
+                local onError = function (err) {
+                    callback && callback(err, null);
+                };
+                _createAndSendRequest(method, path, uriParams, headers, body, onSuccess, onError);
             }
         } else {
             local error = "ERROR: Too many requests to Firebase, try request again in " + (_tooManyReqTimer - now) + " seconds.";

@@ -33,9 +33,9 @@ class BasicTestCase extends ImpTestCase {
     _luckyNum = null;
 
     function setUp() {
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-basic";
-        this._luckyNum = math.rand() + "" + math.rand();
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
+        _path = this.session + "-basic";
+        _luckyNum = math.rand() + "" + math.rand();
         return "Firebase instance \"" + FIREBASE_INSTANCE_NAME + "\" created";
     }
 
@@ -44,13 +44,13 @@ class BasicTestCase extends ImpTestCase {
      */
     function test01_callbackWriteRead() {
         return Promise(function (ok, err) {
-            this._firebase.write(this._path, this._luckyNum, function (error, response) {
+            _firebase.write(_path, _luckyNum, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
                     try {
-                        this.assertEqual(this._luckyNum, response);
-                        ok("Written test data at \""+ this._path + "\"");
+                        this.assertEqual(_luckyNum, response);
+                        ok("Written test data at \""+ _path + "\"");
                     } catch (e) {
                         err(e);
                     }
@@ -58,13 +58,13 @@ class BasicTestCase extends ImpTestCase {
             }.bindenv(this));
         }.bindenv(this)).then(function (data) {
             return Promise(function (ok, err) {
-                this._firebase.read(this._path, function (error, data) {
+                _firebase.read(_path, function (error, data) {
                     if (error) {
                         err(error);
                     } else {
                         try {
-                            this.assertEqual(this._luckyNum, data);
-                            ok("Read test data at \""+ this._path + "\"");
+                            this.assertEqual(_luckyNum, data);
+                            ok("Read test data at \""+ _path + "\"");
                         } catch (e) {
                             err(e);
                         }
@@ -78,16 +78,16 @@ class BasicTestCase extends ImpTestCase {
      * Write, then read test data with promises
      */
     function test02_promiseWriteRead() {
-        this._luckyNum = this._luckyNum + 1;
-        return this._firebase.write(this._path, this._luckyNum)
+        _luckyNum = _luckyNum + 1;
+        return _firebase.write(_path, _luckyNum)
             .then(function (data) {
-                      this.assertEqual(this._luckyNum, data);
+                      this.assertEqual(_luckyNum, data);
                   }.bindenv(this))
             .then(function (data) {
-                      return this._firebase.read(this._path);
+                      return _firebase.read(_path);
                   }.bindenv(this))
             .then(function (data) {
-                      this.assertEqual(this._luckyNum, data);
+                      this.assertEqual(_luckyNum, data);
                   }.bindenv(this));
     }
 
@@ -97,11 +97,11 @@ class BasicTestCase extends ImpTestCase {
      */
     function tearDown() {
         return Promise(function (ok, err) {
-            this._firebase.remove(this._path, function (error, response) {
+            _firebase.remove(_path, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
-                    ok("Removed test data at \""+ this._path + "\"");
+                    ok("Removed test data at \""+ _path + "\"");
                 }
             }.bindenv(this));
         }.bindenv(this))
@@ -111,15 +111,15 @@ class BasicTestCase extends ImpTestCase {
 class BasicOAuth2TestCase extends BasicTestCase {
     function setUp() {
         base.setUp();
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
-        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
     }
 }
 
 class BasicFirebaseIdAuthTestCase extends BasicTestCase {
     function setUp() {
         base.setUp();
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME);
-        this._firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
     }
 }
