@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright 2015-2017 Electric Imp
+// Copyright 2015-2018 Electric Imp
 //
 // SPDX-License-Identifier: MIT
 //
@@ -26,13 +26,25 @@
 const FB_KEEP_ALIVE_SEC               = 60; // Timeout for streaming
 const FB_DEFAULT_BACK_OFF_TIMEOUT_SEC = 60; // Backoff time
 
+// Firebase authentication type
+enum FIREBASE_AUTH_TYPE {
+    // Legacy tokens authentication (https://firebase.google.com/docs/database/rest/auth#legacy_tokens)
+    LEGACY_TOKEN,
+    // Google OAuth2 access tokens authentication (https://firebase.google.com/docs/database/rest/auth#google_oauth2_access_tokens)
+    OAUTH2_TOKEN,
+    // Firebase ID tokens authentication (https://firebase.google.com/docs/database/rest/auth#firebase_id_tokens)
+    FIREBASE_ID_TOKEN
+};
+
 class Firebase {
 
-    static VERSION = "3.1.2";
+    static VERSION = "3.2.0";
 
     // Firebase
     _db = null;                 // The name of your firebase instance
     _auth = null;               // _auth key (if auth is enabled)
+    _authType = null;           // type of authentication
+    _authProvider = null;       // external provider of access tokens
     _baseUrl = null;            // base url (may change with 307 responses)
     _domain = null;
 
@@ -58,7 +70,7 @@ class Firebase {
 
     /***************************************************************************
      * Constructor
-     * Returns: FirebaseStream object
+     * Returns: Firebase object
      * Parameters:
      *      db      - the name of the Firesbase instance
      *      auth    - an optional authentication token
@@ -75,6 +87,7 @@ class Firebase {
         _domain = domain;
         _baseUrl = "https://" + _db + "." + domain;
         _auth = auth;
+        _authType = FIREBASE_AUTH_TYPE.LEGACY_TOKEN;
 
         _bufferedInput = "";
 
@@ -87,10 +100,44 @@ class Firebase {
     }
 
     /***************************************************************************
+     * Changes a type of authentication used by the library to work with the Firebase backend.
+     *
+     * If a not supported value is passed to the type parameter or the provider parameter is null
+     * (irrespective of the type parameter value), the authentication type is changed to the 
+     * FIREBASE_AUTH_TYPE.LEGACY_TOKEN.
+     *
+     * Returns:
+     *      nothing
+     * Parameters:
+     *      type     - a type of authentication. It must be one of the FIREBASE_AUTH_TYPE enum values.
+     *      provider - an external provider of access tokens.
+     *                 The provider must contain an acquireAccessToken(tokenReadyCallback) method, 
+     *                 where tokenReadyCallback is a handler that is called when an access token is 
+     *                 acquired or an error occurs.
+     *                 It has the following signature:
+     *                 tokenReadyCallback(token, error), where
+     *                     token - a string representation of the access token.
+     *                     error - a string with error details (or null if no error occurred).
+     *                 Token provider can be an instance of OAuth2.JWTProfile.Client OAuth2 library
+     *                 (see https://github.com/electricimp/OAuth-2.0)
+     *                 or any other access token provider with a similar interface.
+     *
+     **************************************************************************/
+    function setAuthProvider(type, provider = null) {
+        if (provider && (type == FIREBASE_AUTH_TYPE.OAUTH2_TOKEN || type == FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN)) {
+            _authType = type;
+            _authProvider = provider;
+        } else {
+            _authType = FIREBASE_AUTH_TYPE.LEGACY_TOKEN;
+            _authProvider = null;
+        }
+    }
+
+    /***************************************************************************
      * Attempts to open a stream
      * Returns:
-     *      false - if a stream is already open
-     *      true -  otherwise
+     *      true  - if the stream is opened successfully,
+     *      false - otherwise (e.g. a stream is already open)
      * Parameters:
      *      path - the path of the node we're listending to (without .json)
      *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
@@ -105,21 +152,31 @@ class Firebase {
             uriParams = null;
         }
         if (onError == null) onError = _defaultErrorHandler.bindenv(this);
-        _streamingRequest = http.get(_buildUrl(path, uriParams), _streamingHeaders);
-        _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
 
-        _streamingRequest.sendasync(
-            _onStreamExitFactory(path, onError),
-            _onStreamDataFactory(path, onError),
-            NO_TIMEOUT
-        );
+        _acquireAuthToken(function (token, error) {
+            if (error) {
+                onError({
+                    "statuscode" : 0,
+                    "body" : error
+                });
+                return false;
+            } else {
+                _streamingRequest = http.get(_buildUrl(path, token, uriParams), _streamingHeaders);
+                _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
 
-        // Tickle the keepalive timer
-        if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
-        _keepAliveTimer = imp.wakeup(FB_KEEP_ALIVE_SEC, _onKeepAliveExpiredFactory(path, onError));
+                _streamingRequest.sendasync(
+                    _onStreamExitFactory(path, onError),
+                    _onStreamDataFactory(path, onError),
+                    NO_TIMEOUT
+                );
 
-        // Return true if we opened the stream
-        return true;
+                // Tickle the keepalive timer
+                if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
+                _keepAliveTimer = imp.wakeup(FB_KEEP_ALIVE_SEC, _onKeepAliveExpiredFactory(path, onError));
+            }
+            // Return true if we opened the stream
+            return true;
+        }.bindenv(this));
     }
 
     /***************************************************************************
@@ -184,21 +241,24 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're reading
      *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
-     *      callback - a callback function with one parameter (data) to be
-     *                 executed once the data is read
+     *      callback - a callback function to be executed once the data is read.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
      function read(path, uriParams = null, callback = null) {
         if (typeof uriParams == "function") {
             callback = uriParams;
             uriParams = null;
         }
-        local request = http.get(_buildUrl(path, uriParams), _defaultHeaders)
-        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request, callback);
+        return _processRequest("GET", path, uriParams, _defaultHeaders, null, callback);
     }
 
     /***************************************************************************
@@ -207,17 +267,24 @@ class Firebase {
      *
      * NOTE: This function does NOT update firebase._data
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're pushing to
      *      data     - the data we're pushing
+     *      priority - optional numeric or alphanumeric value of each node.
+     *                 It is used to sort the children under a specific parent,
+     *                 or in a query if no other sort condition is specified.
+     *      callback - a callback function to be executed once the data is pushed.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function push(path, data, priority = null, callback = null) {
         if (priority != null && typeof data == "table") data[".priority"] <- priority;
-        local request = http.post(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
-        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request, callback);
-
+        return _processRequest("POST", path, null, _defaultHeaders, http.jsonencode(data), callback);
     }
 
     /***************************************************************************
@@ -227,15 +294,20 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're writing to
      *      data     - the data we're writing
+     *      callback - a callback function to be executed once the data is written.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function write(path, data, callback = null) {
-        local request = http.put(_buildUrl(path), _defaultHeaders, http.jsonencode(data))
-        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request, callback);
+        return _processRequest("PUT", path, null, _defaultHeaders, http.jsonencode(data), callback);
     }
 
     /***************************************************************************
@@ -245,17 +317,21 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're patching
      *      data     - the data we're patching
+     *      callback - a callback function to be executed once the data is updated.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function update(path, data, callback = null) {
         if (typeof(data) == "table" || typeof(data) == "array") data = http.jsonencode(data);
-        local request = http.request("PATCH", _buildUrl(path), _defaultHeaders, data)
-        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request, callback);
-
+        return _processRequest("PATCH", path, null, _defaultHeaders, data, callback);
     }
 
     /***************************************************************************
@@ -264,20 +340,25 @@ class Firebase {
      * NOTE: This function does NOT update firebase._data
      *
      * Returns:
-     *      nothing
+     *      if the callback is not provided and the Promise library is included 
+     *      in agent code, returns Promise; otherwise returns nothing
      * Parameters:
      *      path     - the path of the node we're deleting
+     *      callback - a callback function to be executed once the data is updated.
+     *                 The callback signature:
+     *                 callback(error, data), where
+     *                   error - string error details, null if the operation succeeds
+     *                   data  - an object represending the Firebase resosponse,
+     *                           null if an error occurred
      **************************************************************************/
     function remove(path, callback = null) {
-        local request = http.httpdelete(_buildUrl(path), _defaultHeaders)
-        request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
-        return _processResponse(request, callback);
+        return _processRequest("DELETE", path, null, _defaultHeaders, null, callback);
     }
 
 
     /************ Private Functions (DO NOT CALL FUNCTIONS BELOW) ************/
     // Builds a url to send a request to
-    function _buildUrl(path, uriParams = null) {
+    function _buildUrl(path, authToken, uriParams = null) {
         // Normalise the /'s
         // _baseUrl = <_baseUrl>
         // path = <path>
@@ -303,18 +384,25 @@ class Firebase {
         //TODO: Right now we aren't doing any kind of checking on the uriParams - we are trusting that Firebase will throw errors as necessary
 
         // Use instance values if these keys aren't provided
-        if(!("ns" in uriParams)) uriParams.ns <- _db;
-        if(!("auth" in uriParams) && _auth !=null) uriParams.auth <- _auth ;
+        if (!("ns" in uriParams)) uriParams.ns <- _db;
+        if (!("auth" in uriParams)) {
+            switch (_authType) {
+                case FIREBASE_AUTH_TYPE.OAUTH2_TOKEN:
+                    uriParams.access_token <- authToken;
+                    break;
+                default:
+                    uriParams.auth <- authToken;
+                    break;
+            }
+        }
 
         url += "?" + http.urlencode(uriParams);
         return url;
     }
 
     // Default error handler
-    function _defaultErrorHandler(errors) {
-        foreach (error in errors) {
-            _logError("ERROR " + error.code + ": " + error.message);
-        }
+    function _defaultErrorHandler(error) {
+        _logError(error.statuscode + ": " + error.body);
     }
 
     // Stream Callback
@@ -624,24 +712,6 @@ class Firebase {
         if (_debug) server.error(message);
     }
 
-    // return a Promise
-    function _createRequestPromise(request) {
-        return Promise(function (resolve, reject) {
-            request.sendasync(_createResponseHandler(resolve, reject).bindenv(this));
-        }.bindenv(this));
-    }
-
-    // process the http response accordingly
-    function _sendRequest(request, callback) {
-        local onSuccess = function (data) {
-            callback && callback(null, data);
-        };
-        local onError = function (err) {
-            callback && callback(err, null);
-        };
-        request.sendasync(_createResponseHandler(onSuccess, onError).bindenv(this));
-    }
-
     function _createResponseHandler(onSuccess, onError) {
         return function (res) {
             local response = res.body;
@@ -681,14 +751,47 @@ class Firebase {
         }
     }
 
-    function _processResponse(request, callback) {
-        // Use Promise if promise libary included and callback != null
+    function _acquireAuthToken(tokenReadyCallback) {
+        if (_authProvider) {
+            _authProvider.acquireAccessToken(tokenReadyCallback);
+        } else {
+            tokenReadyCallback(_auth, null);
+        }
+    }
+
+    function _createAndSendRequest(method, path, uriParams, headers, body, onSuccess, onError) {
+        _acquireAuthToken(function (token, error) {
+            if (error) {
+                onError(error);
+            } else {
+                local url = _buildUrl(path, token, uriParams);
+                local request = http.request(method, url, headers, body ? body : "");
+                request.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
+                request.sendasync(_createResponseHandler(onSuccess, onError).bindenv(this));
+            }
+        }.bindenv(this));
+    }
+
+    function _processRequest(method, path, uriParams, headers, body, callback) {
+        // Use Promise if promise libary included and callback == null
         local usePromise = (_promiseIncluded && callback == null);
         local now = time();
 
         // Only send request if we haven't received a 429 error recently
         if (_tooManyReqTimer == false || _tooManyReqTimer <= now) {
-            return (usePromise) ? _createRequestPromise(request) : _sendRequest(request, callback);
+            if (usePromise) {
+                return Promise(function (resolve, reject) {
+                    _createAndSendRequest(method, path, uriParams, headers, body, resolve, reject);
+                }.bindenv(this));
+            } else {
+                local onSuccess = function (data) {
+                    callback && callback(null, data);
+                };
+                local onError = function (err) {
+                    callback && callback(err, null);
+                };
+                _createAndSendRequest(method, path, uriParams, headers, body, onSuccess, onError);
+            }
         } else {
             local error = "ERROR: Too many requests to Firebase, try request again in " + (_tooManyReqTimer - now) + " seconds.";
             if (usePromise) {

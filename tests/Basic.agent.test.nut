@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright 2017 Electric Imp
+// Copyright 2017-2018 Electric Imp
 //
 // SPDX-License-Identifier: MIT
 //
@@ -22,6 +22,8 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+@include "./tests/AuthProviders.agent.nut"
+
 const FIREBASE_AUTH_KEY = "@{FIREBASE_AUTH_KEY}";
 const FIREBASE_INSTANCE_NAME = "@{FIREBASE_INSTANCE_NAME}";
 
@@ -31,9 +33,9 @@ class BasicTestCase extends ImpTestCase {
     _luckyNum = null;
 
     function setUp() {
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-basic";
-        this._luckyNum = math.rand() + "" + math.rand();
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
+        _path = this.session + "-basic";
+        _luckyNum = math.rand() + "" + math.rand();
         return "Firebase instance \"" + FIREBASE_INSTANCE_NAME + "\" created";
     }
 
@@ -42,54 +44,51 @@ class BasicTestCase extends ImpTestCase {
      */
     function test01_callbackWriteRead() {
         return Promise(function (ok, err) {
-            this._firebase.write(this._path, this._luckyNum, function (error, response) {
+            _firebase.write(_path, _luckyNum, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
                     try {
-                        this.assertEqual(this._luckyNum, response);
-                        ok("Written test data at \""+ this._path + "\"");
+                        this.assertEqual(_luckyNum, response);
+                        ok("Written test data at \""+ _path + "\"");
                     } catch (e) {
                         err(e);
                     }
                 }
             }.bindenv(this));
-        }.bindenv(this)).then(Promise(function (ok, err) {
-            this._firebase.read(this._path, function (error, data) {
-                if (error) {
-                    err(error);
-                } else {
-                    try {
-                        this.assertEqual(this._luckyNum, data);
-                        ok("Read test data at \""+ this._path + "\"");
-                    } catch (e) {
-                        err(e);
+        }.bindenv(this)).then(function (data) {
+            return Promise(function (ok, err) {
+                _firebase.read(_path, function (error, data) {
+                    if (error) {
+                        err(error);
+                    } else {
+                        try {
+                            this.assertEqual(_luckyNum, data);
+                            ok("Read test data at \""+ _path + "\"");
+                        } catch (e) {
+                            err(e);
+                        }
                     }
-                }
+                }.bindenv(this));
             }.bindenv(this));
-        }.bindenv(this)))
+        }.bindenv(this));
     }
 
     /**
      * Write, then read test data with promises
      */
     function test02_promiseWriteRead() {
-        this._luckyNum = this._luckyNum + 1;
-        this._firebase.write(this._path, this._luckyNum)
-        .then(function (data) {
-                  this.assertEqual(this._luckyNum, response);
-              }.bindenv(this),
-              function (err) {
-                  assertTrue(false, err)
-              }.bindenv(this))
-        .then(this._firebase.write(this._path, this._luckyNum)
-        .then(function (data) {
-                  this.assertEqual(this._luckyNum, data);
-              }.bindenv(this),
-              function (err) {
-                  assertTrue(false, err)
-              }.bindenv(this)
-        ));
+        _luckyNum = _luckyNum + 1;
+        return _firebase.write(_path, _luckyNum)
+            .then(function (data) {
+                      this.assertEqual(_luckyNum, data);
+                  }.bindenv(this))
+            .then(function (data) {
+                      return _firebase.read(_path);
+                  }.bindenv(this))
+            .then(function (data) {
+                      this.assertEqual(_luckyNum, data);
+                  }.bindenv(this));
     }
 
 
@@ -98,13 +97,29 @@ class BasicTestCase extends ImpTestCase {
      */
     function tearDown() {
         return Promise(function (ok, err) {
-            this._firebase.remove(this._path, function (error, response) {
+            _firebase.remove(_path, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
-                    ok("Removed test data at \""+ this._path + "\"");
+                    ok("Removed test data at \""+ _path + "\"");
                 }
             }.bindenv(this));
         }.bindenv(this))
+    }
+}
+
+class BasicOAuth2TestCase extends BasicTestCase {
+    function setUp() {
+        base.setUp();
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
+    }
+}
+
+class BasicFirebaseIdAuthTestCase extends BasicTestCase {
+    function setUp() {
+        base.setUp();
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
     }
 }
