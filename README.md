@@ -2,7 +2,7 @@
 
 The Firebase library allows you to easily integrate your agent code with Firebase’s realtime backend, which includes data storage, user authentication, static hosting and more.
 
-**To add this library to your project, add** `#require "Firebase.agent.lib.nut:3.2.0"` **to the top of your agent code.**
+**To include this library in your project, add** `#require "Firebase.agent.lib.nut:3.2.0"` **to the top of your agent code.**
 
 [![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=master)](https://travis-ci.org/electricimp/Firebase)
 
@@ -28,7 +28,7 @@ The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an 
 
 As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
 
-**To add Promise library to your project, add** `#require "Promise.lib.nut:4.0.0"` **to the top of your agent code.**
+**To include the Promise library in your project, add** `#require "Promise.lib.nut:4.0.0"` **to the top of your agent code.**
 
 ### Constructor: Firebase(*instanceName[, authKey][, domain][, debug]*) ###
 
