@@ -55,9 +55,9 @@ This example subscribes to notifications of changes to data at the specified pat
 1. In [Electric Imp’s impCentral™](https://impcentral.electricimp.com/login) create a new Product and an accompanying Development Device Group.
 1. Assign a device to the newly created Device Group.
 1. Copy the code linked below for the example you wish to run and paste it into impCentral as the agent code.
-    1. [DataWriter](./DataWriter.agent.nut)
-    1. [DataReader](./DataReader.agent.nut)
-    1. [StreamReader](./StreamReader.agent.nut)
+    - [DataWriter](./DataWriter.agent.nut)
+    - [DataReader](./DataReader.agent.nut)
+    - [StreamReader](./StreamReader.agent.nut)
 
 Before running an example application you need to set the configuration constants in the application (agent) source code. The instructions below will walk you through the necessary steps.
 
@@ -66,14 +66,14 @@ Before running an example application you need to set the configuration constant
 #### Configure A Firebase Account ###
 
 1. Log in to the [Firebase Console](https://console.firebase.google.com) in your web browser.
-1. If you have an existing project that you want to work with, skip to Step 3, otherwise click the **Add project** button.
+1. If you have an existing project that you want to work with, skip to Step 4, otherwise click the **Add project** button.
 In the opened window enter a project name, then check the **I accept the controller-controller** box and click **Create project**:
 ![Create project](../png/CreateProject.png)
-    - Wait until your project is created and click **Continue**.
+1. Wait until your project is created and click **Continue**.
 1. From your project’s **Project Overview** section, click the gearwheel icon and choose **Project settings** from the menu:
 ![Project settings](../png/ProjectSettings.png)
-    - Copy your project’s ID &mdash; it will be used as the *FIREBASE_PROJECT_ID* constant in the agent code:<br />
-    ![Project settings project ID](../png/ProjectSettingsProjectId.png)
+1. Copy your project’s ID &mdash; it will be used as the *FIREBASE_PROJECT_ID* constant in the agent code:<br />
+![Project settings project ID](../png/ProjectSettingsProjectId.png)
 1. In the left sidebar menu, click **Database**, scroll down to the **Realtime Database** section and click **Create database**:
 ![Realtime Database](../png/RealtimeDatabase.png)
 1. Select **Start in test mode** and click **Enable**:
@@ -115,11 +115,11 @@ It looks something like this:<br /><pre><code>{ "type": "service_account",
 1. In the [Firebase Console](https://console.firebase.google.com) select the project you created in the previous steps.
 1. From your project’s **Project Overview** section, click the gearwheel icon and choose **Project settings** from the menu:
 ![Project settings](../png/ProjectSettings.png)
-    - Copy your project’s Web API Key &mdash; it will be used as the *FIREBASE_WEB_API_KEY* constant in the agent code:
+1. Copy your project’s Web API Key &mdash; it will be used as the *FIREBASE_WEB_API_KEY* constant in the agent code:
 ![Project settings web api key](../png/ProjectSettingsWebApiKey.png)
 1. In the left sidebar menu click **Authentication**, choose the **Sign-in method** tab and click **Anonymous** for your **Sign-in provider**:
 ![Sign-in method](../png/SignInMethod.png)
-1.Click the **Enable** switch to enable Anonymous and click **Save**:
+1. Click the **Enable** switch to enable Anonymous and click **Save**:
 ![Sign-in method](../png/EnableAnonymousProvider.png)
 
 #### Constants Setup ###

@@ -14,13 +14,13 @@ The tests require the following actions to be performed.
 ## Configure A Firebase Account ##
 
 1. Log in to the [Firebase Console](https://console.firebase.google.com) in your web browser.
-1. If you have an existing project that you want to work with, skip to Step 3, otherwise click the **Add project** button.
+1. If you have an existing project that you want to work with, skip to Step 4, otherwise click the **Add project** button.
 In the opened window enter a project name, then check the **I accept the controller-controller** box and click **Create project**:
 ![Create project](../png/CreateProject.png)
-    - Wait until your project is created and click **Continue**.
+1. Wait until your project is created and click **Continue**.
 1. From your project’s **Project Overview** section, click the gearwheel icon and choose **Project settings** from the menu:
 ![Project settings](../png/ProjectSettings.png)
-    - Copy your project’s ID and Web API Key &mdash; they will be used as the *FIREBASE_INSTANCE_NAME* and *FIREBASE_WEB_API_KEY* environment variables.
+1. Copy your project’s ID and Web API Key &mdash; they will be used as the *FIREBASE_INSTANCE_NAME* and *FIREBASE_WEB_API_KEY* environment variables.
 ![Project settings project ID](../png/ProjectSettingsProjectIdAndWebApiKey.png)
 1. Click the **Service accounts** tab, then click **Generate new private key**:
 ![Generate private key](../png/GeneratePrivateKey.png)
