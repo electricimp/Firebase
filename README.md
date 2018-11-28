@@ -16,23 +16,21 @@ Firebase supports three types of [authentication](https://firebase.google.com/do
 - [Firebase ID tokens](https://firebase.google.com/docs/database/rest/auth#firebase_id_tokens)
 - [Legacy tokens](https://firebase.google.com/docs/database/rest/auth#legacy_tokens)
 
-By default, the library is configured to use legacy tokens for authentication. This mode may be initialized with the *authKey* parameter in the library class’ constructor. Set this parameter to `null` if you plan to use another authentication type.
+By default, the library is configured to use legacy tokens for authentication. This mode may be initialized by using the *authKey* parameter in the library class’ constructor. Set this parameter to `null` if you plan to use another authentication type.
 
-At any time, the current type of authentication may be changed by calling the *setAuthProvider()* method. Please see the method’s description for more details.
+At any time, the current type of authentication may be changed by calling [*setAuthProvider()*](#setauthprovidertype-provider). Please see the method’s description for more details.
 
 Full working examples for each type of authentication are provided in the [Examples](./Examples) directory.
 
 ### Optional Callbacks And Promises ###
 
-The methods *read()*, *write()*, *remove()*, *update()* and *push()* contain an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback takes two required parameters: *error* and *data*. If no error is encountered, *error* will be `null`. If Firebase returns a 429 error the library will now prevent further requests from being processed for at least 60 seconds, and an error will be passed to the callback’s *error* parameter.
+The methods *read()*, *write()*, *remove()*, *update()* and *push()* all include an optional *callback* parameter. If a callback function is provided, it will be called when the response from Firebase is received. The callback function has two parameters: *error* and *data*. If no error was encountered, *error* will be `null`. If any error occurred, an error message will be passed to the callback’s *error* parameter. If Firebase returns a 429 error, the library will now prevent further requests from being processed for at least 60 seconds. 
 
-As an alternative to passing in a callback, you can include the Electric Imp Promise library [GitHub](https://github.com/electricimp/Promise/). If the promise library is included, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will return a promise if no callback is provided.
+As an alternative to passing in a callback, you can make use of Electric Imp’s Promise library [GitHub](https://github.com/electricimp/Promise/). If the Promise library is included and no callback is provided, the methods *read()*, *write()*, *remove()*, *update()* and *push()* will automatically return a promise.
 
 **To include the Promise library in your project, add** `#require "Promise.lib.nut:4.0.0"` **to the top of your agent code.**
 
 ### Constructor: Firebase(*instanceName[, authKey][, domain][, debug]*) ###
-
-The Firebase class must be instantiated with an instance name, and optionally an authorization Key, a custom Firebase domain and a debug flag.
 
 #### Parameters ####
 
@@ -45,9 +43,9 @@ The Firebase class must be instantiated with an instance name, and optionally an
 
 The domain and instance are used to construct the URL that requests are made against in the following way: `https://{instance}.{domain}`.
 
-If you do not plan to use legacy tokens for authentication, pass `null` as the *authKey* parameter and call the *setAuthProvider()* method after the constructor.
+If you do not plan to use legacy tokens for authentication, pass `null` as the *authKey* parameter and call the [*setAuthProvider()*](#setauthprovidertype-provider) method immediately after the constructor. That method’s description contains an example of this.
 
-#### Example ####
+#### Example: Legacy Authentication ####
 
 ```squirrel
 #require "Firebase.agent.lib.nut:3.2.0"
@@ -77,7 +75,7 @@ If an unsupported value is passed into *type*, or `null` is passed into *provide
 
 Nothing.
 
-#### Example ####
+#### Example: Firebase ID Authentication ####
 
 ```squirrel
 #require "Firebase.agent.lib.nut:3.2.0"
@@ -272,7 +270,7 @@ fbDino <- Firebase("dinosaur-facts");
 fbDino.read("/dinosaurs", {"shallow": true}, function(error, data){
     server.log(http.jsonencode(data));
     // Logs: { "lambeosaurus": true, "linhenykus": true, "triceratops": true,
-    //       "stegosaurus": true, "bruhathkayosaurus": true, "pterodactyl": true }
+    //         "stegosaurus": true, "bruhathkayosaurus": true, "pterodactyl": true }
 })
 
 // The \uf8ff character used in the query above is a very high code point in the Unicode range.
@@ -439,4 +437,4 @@ Tests for the library are provided in the [tests](./tests) directory.
 
 ## License ##
 
-The Firebase class is licensed under [MIT License](https://github.com/electricimp/Firebase/tree/master/LICENSE).
+This library is licensed under [MIT License](https://github.com/electricimp/Firebase/blob/master/LICENSE).
