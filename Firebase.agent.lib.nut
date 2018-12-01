@@ -136,8 +136,8 @@ class Firebase {
     /***************************************************************************
      * Attempts to open a stream
      * Returns:
-     *      true  - if the stream is opened successfully,
-     *      false - otherwise (e.g. a stream is already open)
+     *      false - if a stream is already open
+     *      true -  otherwise
      * Parameters:
      *      path - the path of the node we're listending to (without .json)
      *      uriParams - table of values to attach as URI parameters.  This can be used for queries, etc. - see https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-uri-params
@@ -159,7 +159,6 @@ class Firebase {
                     "statuscode" : 0,
                     "body" : error
                 });
-                return false;
             } else {
                 _streamingRequest = http.get(_buildUrl(path, token, uriParams), _streamingHeaders);
                 _streamingRequest.setvalidation(VALIDATE_USING_SYSTEM_CA_CERTS);
@@ -174,9 +173,8 @@ class Firebase {
                 if (_keepAliveTimer) imp.cancelwakeup(_keepAliveTimer);
                 _keepAliveTimer = imp.wakeup(FB_KEEP_ALIVE_SEC, _onKeepAliveExpiredFactory(path, onError));
             }
-            // Return true if we opened the stream
-            return true;
         }.bindenv(this));
+        return true;
     }
 
     /***************************************************************************
