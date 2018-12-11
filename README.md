@@ -158,7 +158,7 @@ The Firebase class will attempt to silently and automatically reconnect when it 
 
 #### Return Value ####
 
-Nothing.
+`false`, if a stream is already open, and `true` otherwise.
 
 #### Example ####
 
