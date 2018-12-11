@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright 2017 Electric Imp
+// Copyright 2017-2018 Electric Imp
 //
 // SPDX-License-Identifier: MIT
 //
@@ -22,10 +22,12 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+@include "./tests/AuthProviders.agent.nut"
+
 const FIREBASE_AUTH_KEY = "@{FIREBASE_AUTH_KEY}";
 const FIREBASE_INSTANCE_NAME = "@{FIREBASE_INSTANCE_NAME}";
 
-class BasicTestCase extends ImpTestCase {
+class QueriesTestCase extends ImpTestCase {
     _path = null;
     _firebase = null;
 
@@ -74,20 +76,14 @@ class BasicTestCase extends ImpTestCase {
     };
 
     function setUp() {
-        this._firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
-        this._path = this.session + "-queries";
-        return "Firebase instance \"" + FIREBASE_INSTANCE_NAME + "\" created";
-    }
-
-    /**
-     * Add indexes
-     */
-    function test01_addIndex() {
-        local rules = {"rules": {}};
-        rules.rules[this._path] <- {".write": true, ".read": true, ".indexOn": ["height", "weight", "length"]};
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME, FIREBASE_AUTH_KEY);
+        _path = this.session + "-queries";
+        // add indexes
+        local rules = {"rules": {".write": true, ".read": true}};
+        rules.rules[_path] <- {".write": true, ".read": true, ".indexOn": ["height", "weight", "length"]};
 
         return Promise(function (ok, err) {
-            this._firebase.write(".settings/rules",
+            _firebase.write(".settings/rules",
                 rules,
                 function (error, res) {
                     if (error) {
@@ -102,15 +98,15 @@ class BasicTestCase extends ImpTestCase {
     /**
      * Write test data
      */
-    function test02_write() {
+    function test01_write() {
         return Promise(function (ok, err) {
-            this._firebase.write(this._path, this._dinos, function (error, response) {
+            _firebase.write(_path, _dinos, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
                     try {
-                        this.assertDeepEqual(this._dinos, response);
-                        ok("Written test data at \""+ this._path + "\"");
+                        this.assertDeepEqual(_dinos, response);
+                        ok("Written test data at \""+ _path + "\"");
                     } catch (e) {
                         err(e);
                     }
@@ -122,9 +118,9 @@ class BasicTestCase extends ImpTestCase {
     /**
      * Read keys only
      */
-    function test03_readKeys() {
+    function test02_readKeys() {
         return Promise(function (ok, err) {
-            this._firebase.read(this._path, {"shallow": true}, function (error, data) {
+            _firebase.read(_path, {"shallow": true}, function (error, data) {
                 if (error) {
                     err(error);
                 } else {
@@ -146,13 +142,29 @@ class BasicTestCase extends ImpTestCase {
      */
     function tearDown() {
         return Promise(function (ok, err) {
-            this._firebase.remove(this._path, function (error, response) {
+            _firebase.remove(_path, function (error, response) {
                 if (error) {
                     err(error);
                 } else {
-                    ok("Removed test data at \""+ this._path + "\"");
+                    ok("Removed test data at \""+ _path + "\"");
                 }
             }.bindenv(this));
         }.bindenv(this))
+    }
+}
+
+class QueriesOAuth2TestCase extends QueriesTestCase {
+    function setUp() {
+        base.setUp();
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.OAUTH2_TOKEN, oAuth2TokenProvider);
+    }
+}
+
+class QueriesFirebaseIdAuthTestCase extends QueriesTestCase {
+    function setUp() {
+        base.setUp();
+        _firebase = Firebase(FIREBASE_INSTANCE_NAME);
+        _firebase.setAuthProvider(FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN, firebaseIdTokenProvider);
     }
 }
