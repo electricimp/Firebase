@@ -67,7 +67,7 @@ This method updates the type of authentication used by the library to communicat
 | Parameter | Type | Required | Notes |
 | --- | --- | --- | --- |
 | *type* | Constant | Yes | The type of authentication. It must be one of the following values:<br />&bull; *FIREBASE_AUTH_TYPE.LEGACY_TOKEN* &mdash; [Legacy token authentication](https://firebase.google.com/docs/database/rest/auth#legacy_tokens). It is initialized by the *authKey* parameter in the library class’ constructor<br />&bull; *FIREBASE_AUTH_TYPE.OAUTH2_TOKEN* &mdash; [Google OAuth2 access tokens authentication](https://firebase.google.com/docs/database/rest/auth#google_oauth2_access_tokens). An external provider of access tokens must be used and passed to the library via the *provider* parameter. Electric Imp’s [OAuth2.JWTProfile.Client](https://github.com/electricimp/OAuth-2.0) library may be used as the provider<br />&bull; *FIREBASE_AUTH_TYPE.FIREBASE_ID_TOKEN* &mdash; [Firebase ID token authentication](https://firebase.google.com/docs/database/rest/auth#firebase_id_tokens). An external provider of access tokens must be used and passed to the library via the *provider* parameter |
-| *provider* | String | No | An optional external provider of access tokens. The provider must contain an *acquireAccessToken()* method that takes one required parameter: a handler that is called when an access token is acquired or an error occurs. The handler itself has two required parameters: *token* &mdash; a string representation of the access token, and *error* &mdash; a string with error details (or `null` if no error occurred). |
+| *provider* | String | No | An optional external provider of access tokens. The provider must contain an *acquireAccessToken()* method that takes one required parameter: a callback that is executed when an access token is acquired or an error occurs. The callback has two required parameters of its own: *token* &mdash; a string representation of the access token, and *error* &mdash; a string with error details (or `null` if no error occurred) |
 
 If an unsupported value is passed into *type*, or `null` is passed into *provider* (irrespective of the *type* value), the authentication type is changed to *LEGACY_TOKEN*.
 
@@ -158,7 +158,7 @@ The Firebase class will attempt to silently and automatically reconnect when it 
 
 #### Return Value ####
 
-`false`, if a stream is already open, and `true` otherwise.
+Boolean &mdash; `false` if a stream is already open, otherwise `true`.
 
 #### Example ####
 
