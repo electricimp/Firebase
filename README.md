@@ -4,7 +4,7 @@ The Firebase library allows you to easily integrate your agent code with Firebas
 
 **To include this library in your project, add** `#require "Firebase.agent.lib.nut:3.2.0"` **to the top of your agent code.**
 
-[![Build Status](https://travis-ci.org/electricimp/Firebase.svg?branch=master)](https://travis-ci.org/electricimp/Firebase)
+![Build Status](https://cse-ci.electricimp.com/app/rest/builds/buildType:(id:Firebase_BuildAndTest)/statusIcon)
 
 ## Class Usage ##
 
